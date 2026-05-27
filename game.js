@@ -2676,7 +2676,7 @@
   });
 
   function useMobileControls() {
-    return window.matchMedia("(pointer: coarse)").matches || window.innerWidth <= 900;
+    return window.matchMedia("(hover: none) and (pointer: coarse)").matches;
   }
 
   function bindHold(btn, key) {

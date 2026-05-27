@@ -799,7 +799,7 @@ body:not(.game-playing) .mobile-controls {
   visibility: hidden;
 }
 
-@media (pointer: coarse), (max-width: 900px) {
+@media (hover: none) and (pointer: coarse) {
   .mobile-controls {
     display: block;
   }
