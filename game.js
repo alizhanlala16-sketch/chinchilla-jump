@@ -25,6 +25,11 @@
   const FRAGILE_LIFETIME = 90;
   const FRAGILE_WARNING = 50;
 
+  const ROCKET_DURATION = 360;
+  const ROCKET_LIFT = -8.5;
+  const SHIELD_DURATION = 1140;
+  const SHIELD_RESCUE_INDEX = 3;
+
   const PLATFORM_TYPES = {
     grass: { color: "#4f7d3a", edge: "#3a5e29", breakable: false, moving: false },
     log: { color: "#7a4a2c", edge: "#5a341d", breakable: false, moving: false },
@@ -69,6 +74,8 @@
     standingOn: null,
     lives: 3,
     invincibleTimer: 0,
+    rocketTimer: 0,
+    shieldTimer: 0,
   };
 
   let platforms = [];
@@ -81,6 +88,8 @@
   let lastFoxSpawn = 0;
   let squirrels = [];
   let apples = [];
+  let rockets = [];
+  let shields = [];
 
   const forestTreesFar = [];
   const forestTreesNear = [];
@@ -232,6 +241,8 @@
     player.standingOn = null;
     player.lives = 3;
     player.invincibleTimer = 0;
+    player.rocketTimer = 0;
+    player.shieldTimer = 0;
     platforms = [];
     hays = [];
     saws = [];
@@ -241,6 +252,8 @@
     lastFoxSpawn = INITIAL_Y;
     squirrels = [];
     apples = [];
+    rockets = [];
+    shields = [];
 
     const start = {
       x: W / 2 - 80,
@@ -340,6 +353,28 @@
       });
     }
 
+    if (type !== "fragile" && Math.random() < 0.012) {
+      rockets.push({
+        platform,
+        offsetX: rand(-platform.w * 0.15, platform.w * 0.15),
+        offsetY: -28,
+        collected: false,
+        bob: rand(0, Math.PI * 2),
+        r: 13,
+      });
+    }
+
+    if (type !== "fragile" && Math.random() < 0.012) {
+      shields.push({
+        platform,
+        offsetX: rand(-platform.w * 0.15, platform.w * 0.15),
+        offsetY: -26,
+        collected: false,
+        bob: rand(0, Math.PI * 2),
+        r: 13,
+      });
+    }
+
     if (type !== "fragile" && Math.random() < 0.08) {
       squirrels.push({
         platform,
@@ -364,6 +399,8 @@
     platforms = platforms.filter((p) => p.y < cameraY + H + 200);
     hays = hays.filter((h) => !h.collected && h.platform.y < cameraY + H + 200);
     apples = apples.filter((a) => !a.collected && a.platform.y < cameraY + H + 200);
+    rockets = rockets.filter((r) => !r.collected && r.platform.y < cameraY + H + 200);
+    shields = shields.filter((s) => !s.collected && s.platform.y < cameraY + H + 200);
   }
 
   let audioCtx = null;
@@ -784,8 +821,16 @@
       player.x += player.standingOn.deltaX || 0;
     }
 
-    player.vy += GRAVITY;
-    player.vy = Math.min(player.vy, MAX_FALL);
+    const rocketActive = player.rocketTimer > 0;
+    if (rocketActive) {
+      player.vy = ROCKET_LIFT;
+      player.grounded = false;
+      player.standingOn = null;
+      spawnRocketTrail(player.x, player.y + player.h / 2);
+    } else {
+      player.vy += GRAVITY;
+      player.vy = Math.min(player.vy, MAX_FALL);
+    }
     player.x += player.vx;
     player.y += player.vy;
 
@@ -801,7 +846,7 @@
     const wasGrounded = player.grounded;
     player.grounded = false;
 
-    if (player.vy > 0) {
+    if (!rocketActive && player.vy > 0) {
       for (const p of platforms) {
         if (p.broken || p.extending) continue;
 
@@ -839,13 +884,25 @@
     maxHeight = Math.max(maxHeight, currentHeight);
 
     if (player.y - cameraY > H + 60) {
-      endGame();
+      if (player.shieldTimer > 0) {
+        rescueWithShield();
+      } else {
+        endGame();
+      }
     }
 
     player.squash += (1 - player.squash) * 0.18;
     player.blinkTimer += 1;
     player.earWobble *= 0.9;
     if (player.invincibleTimer > 0) player.invincibleTimer -= 1;
+    if (player.rocketTimer > 0) {
+      player.rocketTimer -= 1;
+      if (player.rocketTimer === 0) {
+        player.vy = -2;
+        spawnDoubleJumpRing(player.x, player.y);
+      }
+    }
+    if (player.shieldTimer > 0) player.shieldTimer -= 1;
   }
 
   function updateHays() {
@@ -1746,7 +1803,7 @@
   }
 
   function drawChinchilla() {
-    if (player.invincibleTimer > 0 && Math.floor(player.invincibleTimer / 5) % 2 === 0) return;
+    if (player.shieldTimer === 0 && player.rocketTimer === 0 && player.invincibleTimer > 0 && Math.floor(player.invincibleTimer / 5) % 2 === 0) return;
     const screenY = player.y - cameraY;
     const sx = player.squash;
     const sy = 2 - player.squash;
@@ -2150,6 +2207,11 @@
 
   function damagePlayer() {
     if (player.invincibleTimer > 0) return;
+    if (player.shieldTimer > 0 || player.rocketTimer > 0) {
+      player.invincibleTimer = 30;
+      spawnShieldHit(player.x, player.y);
+      return;
+    }
     player.lives -= 1;
     player.invincibleTimer = 90;
     player.vy = -9;
@@ -2157,6 +2219,92 @@
     updateHud();
     if (player.lives <= 0) {
       endGame();
+    }
+  }
+
+  function spawnShieldHit(x, y) {
+    for (let i = 0; i < 14; i += 1) {
+      const a = (i / 14) * Math.PI * 2;
+      particles.push({
+        x: x + Math.cos(a) * 24,
+        y: y + Math.sin(a) * 24,
+        vx: Math.cos(a) * 3.4,
+        vy: Math.sin(a) * 3.4,
+        life: 24,
+        maxLife: 24,
+        color: "rgba(140,210,255,0.95)",
+        size: rand(2, 3.5),
+      });
+    }
+  }
+
+  function spawnRocketTrail(x, y) {
+    for (let i = 0; i < 2; i += 1) {
+      particles.push({
+        x: x + rand(-5, 5),
+        y: y + rand(-2, 4),
+        vx: rand(-0.8, 0.8),
+        vy: rand(2.5, 4.5),
+        life: rand(14, 24),
+        maxLife: 24,
+        color: i % 2 === 0 ? "rgba(255,180,60,0.95)" : "rgba(255,90,30,0.9)",
+        size: rand(2.5, 4.5),
+      });
+    }
+    if (Math.random() < 0.5) {
+      particles.push({
+        x: x + rand(-6, 6),
+        y: y + rand(2, 8),
+        vx: rand(-0.4, 0.4),
+        vy: rand(1.2, 2.4),
+        life: 28,
+        maxLife: 28,
+        color: "rgba(80,80,90,0.55)",
+        size: rand(3, 5),
+      });
+    }
+  }
+
+  function rescueWithShield() {
+    const above = platforms
+      .filter((p) => !p.broken && !p.extending && p.y < player.y - 10)
+      .sort((a, b) => b.y - a.y);
+    let target = null;
+    if (above.length > 0) {
+      const idx = Math.min(SHIELD_RESCUE_INDEX - 1, above.length - 1);
+      target = above[idx];
+    }
+    if (!target) {
+      const any = platforms.filter((p) => !p.broken && !p.extending);
+      any.sort((a, b) => a.y - b.y);
+      target = any[0];
+    }
+    if (!target) {
+      endGame();
+      return;
+    }
+    player.x = target.x + target.w / 2;
+    player.y = target.y - player.h / 2 - 4;
+    player.vx = 0;
+    player.vy = -4;
+    player.grounded = false;
+    player.standingOn = null;
+    player.jumpsLeft = 2;
+    player.invincibleTimer = 60;
+    cameraY = Math.min(cameraY, player.y - CAMERA_FOLLOW);
+    spawnRespawnBurst(target);
+    for (let i = 0; i < 22; i += 1) {
+      const a = (i / 22) * Math.PI * 2;
+      particles.push({
+        x: player.x,
+        y: player.y,
+        vx: Math.cos(a) * 4,
+        vy: Math.sin(a) * 4 - 1,
+        life: 36,
+        maxLife: 36,
+        color: "rgba(150,220,255,0.95)",
+        size: rand(2.5, 4),
+      });
     }
   }
 
@@ -2218,6 +2366,335 @@
     ctx.restore();
   }
 
+  function updateRockets() {
+    for (const r of rockets) {
+      if (r.collected || r.platform.broken) continue;
+      r.bob += 0.08;
+      const rx = r.platform.x + r.platform.w / 2 + r.offsetX;
+      const ry = r.platform.y + r.offsetY;
+      const dx = player.x - rx;
+      const dy = player.y - ry;
+      if (Math.hypot(dx, dy) < player.w * 0.55 + r.r) {
+        r.collected = true;
+        player.rocketTimer = ROCKET_DURATION;
+        player.invincibleTimer = Math.max(player.invincibleTimer, 30);
+        score += 25;
+        spawnSparkles(rx, ry);
+        playSnort(1.6, 0.25);
+        updateHud();
+      }
+    }
+  }
+
+  function updateShields() {
+    for (const s of shields) {
+      if (s.collected || s.platform.broken) continue;
+      s.bob += 0.07;
+      const sx = s.platform.x + s.platform.w / 2 + s.offsetX;
+      const sy = s.platform.y + s.offsetY;
+      const dx = player.x - sx;
+      const dy = player.y - sy;
+      if (Math.hypot(dx, dy) < player.w * 0.55 + s.r) {
+        s.collected = true;
+        player.shieldTimer = SHIELD_DURATION;
+        score += 25;
+        spawnSparkles(sx, sy);
+        playSnort(0.85, 0.28);
+        updateHud();
+      }
+    }
+  }
+
+  function drawRockets() {
+    for (const r of rockets) {
+      if (r.collected || r.platform.broken) continue;
+      const rx = r.platform.x + r.platform.w / 2 + r.offsetX;
+      const baseY = r.platform.y + r.offsetY + Math.sin(r.bob) * 3;
+      const screenY = baseY - cameraY;
+      if (screenY < -30 || screenY > H + 30) continue;
+
+      ctx.save();
+      ctx.translate(rx, screenY);
+
+      ctx.fillStyle = "rgba(0,0,0,0.22)";
+      ctx.beginPath();
+      ctx.ellipse(0, 16, 11, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      const flameH = 8 + Math.sin(r.bob * 3) * 2;
+      ctx.fillStyle = "rgba(255,170,40,0.85)";
+      ctx.beginPath();
+      ctx.moveTo(-5, 8);
+      ctx.quadraticCurveTo(0, 8 + flameH + 4, 5, 8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,240,150,0.95)";
+      ctx.beginPath();
+      ctx.moveTo(-3, 8);
+      ctx.quadraticCurveTo(0, 8 + flameH, 3, 8);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#dfe5ec";
+      ctx.beginPath();
+      ctx.moveTo(0, -16);
+      ctx.quadraticCurveTo(8, -12, 8, -2);
+      ctx.lineTo(8, 8);
+      ctx.lineTo(-8, 8);
+      ctx.lineTo(-8, -2);
+      ctx.quadraticCurveTo(-8, -12, 0, -16);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "#6f7a86";
+      ctx.lineWidth = 1.1;
+      ctx.stroke();
+
+      ctx.fillStyle = "#e63a2c";
+      ctx.beginPath();
+      ctx.moveTo(0, -16);
+      ctx.quadraticCurveTo(7, -10, 7, -3);
+      ctx.lineTo(-7, -3);
+      ctx.quadraticCurveTo(-7, -10, 0, -16);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#79c8ff";
+      ctx.beginPath();
+      ctx.arc(0, -1, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#27516e";
+      ctx.lineWidth = 0.9;
+      ctx.stroke();
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.beginPath();
+      ctx.arc(-1, -2, 1.1, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#e63a2c";
+      ctx.beginPath();
+      ctx.moveTo(-8, 4);
+      ctx.lineTo(-13, 9);
+      ctx.lineTo(-8, 9);
+      ctx.closePath();
+      ctx.moveTo(8, 4);
+      ctx.lineTo(13, 9);
+      ctx.lineTo(8, 9);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(255,235,120," + (0.5 + Math.sin(r.bob * 2) * 0.3).toFixed(2) + ")";
+      ctx.beginPath();
+      ctx.arc(0, -22, 1.4, 0, Math.PI * 2);
+      ctx.arc(10, -10, 1.2, 0, Math.PI * 2);
+      ctx.arc(-10, -10, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+  }
+
+  function drawShields() {
+    for (const s of shields) {
+      if (s.collected || s.platform.broken) continue;
+      const sx = s.platform.x + s.platform.w / 2 + s.offsetX;
+      const baseY = s.platform.y + s.offsetY + Math.sin(s.bob) * 3;
+      const screenY = baseY - cameraY;
+      if (screenY < -30 || screenY > H + 30) continue;
+
+      ctx.save();
+      ctx.translate(sx, screenY);
+
+      ctx.fillStyle = "rgba(0,0,0,0.22)";
+      ctx.beginPath();
+      ctx.ellipse(0, 16, 12, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, 22);
+      glow.addColorStop(0, "rgba(160,230,255,0.55)");
+      glow.addColorStop(1, "rgba(160,230,255,0)");
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(0, 0, 22, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#1f4f7a";
+      ctx.beginPath();
+      ctx.moveTo(0, -14);
+      ctx.quadraticCurveTo(13, -10, 13, 0);
+      ctx.quadraticCurveTo(13, 11, 0, 16);
+      ctx.quadraticCurveTo(-13, 11, -13, 0);
+      ctx.quadraticCurveTo(-13, -10, 0, -14);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#3a8dc4";
+      ctx.beginPath();
+      ctx.moveTo(0, -11);
+      ctx.quadraticCurveTo(10, -8, 10, 0);
+      ctx.quadraticCurveTo(10, 9, 0, 13);
+      ctx.quadraticCurveTo(-10, 9, -10, 0);
+      ctx.quadraticCurveTo(-10, -8, 0, -11);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#6fc0ec";
+      ctx.beginPath();
+      ctx.moveTo(0, -8);
+      ctx.quadraticCurveTo(7, -6, 7, 0);
+      ctx.quadraticCurveTo(7, 6, 0, 9);
+      ctx.quadraticCurveTo(-7, 6, -7, 0);
+      ctx.quadraticCurveTo(-7, -6, 0, -8);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#ffd84a";
+      ctx.font = "bold 11px Segoe UI";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("★", 0, 1);
+
+      ctx.fillStyle = "rgba(255,255,255,0.7)";
+      ctx.beginPath();
+      ctx.ellipse(-4, -6, 2.2, 4, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+  }
+
+  function drawShieldAura() {
+    if (player.shieldTimer <= 0) return;
+    const screenY = player.y - cameraY;
+    const t = player.shieldTimer / SHIELD_DURATION;
+    const pulse = 1 + Math.sin(player.blinkTimer * 0.18) * 0.05;
+    const radius = (player.w * 0.95) * pulse;
+    ctx.save();
+    ctx.translate(player.x, screenY);
+
+    const grad = ctx.createRadialGradient(0, 0, radius * 0.4, 0, 0, radius);
+    grad.addColorStop(0, "rgba(160,220,255,0.05)");
+    grad.addColorStop(0.7, "rgba(120,200,255,0.18)");
+    grad.addColorStop(1, "rgba(120,200,255,0.45)");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    const blink = t < 0.2 ? (0.4 + Math.sin(player.blinkTimer * 0.6) * 0.3) : 0.85;
+    ctx.strokeStyle = "rgba(180,230,255," + blink.toFixed(2) + ")";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(255,255,255,0.55)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(-radius * 0.25, -radius * 0.3, radius * 0.6, -0.9, -0.2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawRocketAura() {
+    if (player.rocketTimer <= 0) return;
+    const screenY = player.y - cameraY;
+    ctx.save();
+    ctx.translate(player.x, screenY + player.h / 2 + 2);
+    const flicker = 0.85 + Math.sin(player.blinkTimer * 0.9) * 0.15;
+    ctx.fillStyle = "rgba(255,170,60," + flicker.toFixed(2) + ")";
+    ctx.beginPath();
+    ctx.moveTo(-7, 0);
+    ctx.quadraticCurveTo(0, 22, 7, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "rgba(255,235,150,0.95)";
+    ctx.beginPath();
+    ctx.moveTo(-4, 0);
+    ctx.quadraticCurveTo(0, 14, 4, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawPowerupTimers() {
+    const baseX = 20;
+    const baseY = H - 56;
+    let offset = 0;
+
+    if (player.rocketTimer > 0) {
+      drawPowerupIcon(baseX + offset, baseY, player.rocketTimer / ROCKET_DURATION, "rocket");
+      offset += 36;
+    }
+    if (player.shieldTimer > 0) {
+      drawPowerupIcon(baseX + offset, baseY, player.shieldTimer / SHIELD_DURATION, "shield");
+    }
+  }
+
+  function drawPowerupIcon(cx, cy, ratio, kind) {
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    ctx.fillStyle = "rgba(0,0,0,0.45)";
+    ctx.beginPath();
+    ctx.arc(0, 0, 14, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(255,255,255,0.25)";
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.arc(0, 0, 12, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = kind === "rocket" ? "#ffb24a" : "#7fd0ff";
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.arc(0, 0, 12, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * ratio);
+    ctx.stroke();
+
+    if (kind === "rocket") {
+      ctx.fillStyle = "#dfe5ec";
+      ctx.beginPath();
+      ctx.moveTo(0, -8);
+      ctx.quadraticCurveTo(4, -5, 4, 0);
+      ctx.lineTo(4, 5);
+      ctx.lineTo(-4, 5);
+      ctx.lineTo(-4, 0);
+      ctx.quadraticCurveTo(-4, -5, 0, -8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#e63a2c";
+      ctx.beginPath();
+      ctx.moveTo(0, -8);
+      ctx.quadraticCurveTo(3.5, -4, 3.5, -1);
+      ctx.lineTo(-3.5, -1);
+      ctx.quadraticCurveTo(-3.5, -4, 0, -8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,170,60,0.95)";
+      ctx.beginPath();
+      ctx.moveTo(-3, 5);
+      ctx.quadraticCurveTo(0, 11, 3, 5);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      ctx.fillStyle = "#3a8dc4";
+      ctx.beginPath();
+      ctx.moveTo(0, -7);
+      ctx.quadraticCurveTo(6, -5, 6, 0);
+      ctx.quadraticCurveTo(6, 5, 0, 8);
+      ctx.quadraticCurveTo(-6, 5, -6, 0);
+      ctx.quadraticCurveTo(-6, -5, 0, -7);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#ffd84a";
+      ctx.font = "bold 9px Segoe UI";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("★", 0, 1);
+    }
+
+    ctx.restore();
+  }
   function drawLives() {
     const total = 3;
     const startX = 20;
@@ -2944,12 +3421,17 @@
     drawSquirrels();
     drawHay();
     drawApples();
+    drawRockets();
+    drawShields();
     drawSaws();
     drawKnives();
     drawParticles();
+    drawRocketAura();
     drawChinchilla();
+    drawShieldAura();
     drawDoubleJumpIndicator();
     drawLives();
+    drawPowerupTimers();
   }
 
   function update() {
@@ -2959,6 +3441,8 @@
     updatePlayer();
     updateHays();
     updateApples();
+    updateRockets();
+    updateShields();
     updateSaws();
     updateFoxes();
     updateKnives();
