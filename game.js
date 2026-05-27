@@ -623,9 +623,9 @@
       }
     }
 
-    if (highestPlatformY < lastFoxSpawn - 2200) {
+    if (highestPlatformY < lastFoxSpawn - 1100) {
       lastFoxSpawn = highestPlatformY;
-      if (Math.random() < 0.35) {
+      if (Math.random() < 0.6) {
         const foxY = highestPlatformY + 350;
         const side = Math.random() < 0.5 ? "left" : "right";
         foxes.push({
