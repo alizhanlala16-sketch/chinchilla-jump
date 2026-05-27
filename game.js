@@ -642,8 +642,18 @@
       const dx = player.x - saw.x;
       const dy = player.y - saw.y;
       if (Math.hypot(dx, dy) < saw.r + player.w * 0.35) {
-        damagePlayer();
+        if (player.shieldTimer > 0 || player.rocketTimer > 0) {
+          if (!saw.deflectCooldown || saw.deflectCooldown <= 0) {
+            saw.vx = -saw.vx * 1.05;
+            saw.vy = (saw.vy || 0) - 2;
+            saw.deflectCooldown = 18;
+            spawnShieldHit(saw.x, saw.y);
+          }
+        } else {
+          damagePlayer();
+        }
       }
+      if (saw.deflectCooldown && saw.deflectCooldown > 0) saw.deflectCooldown -= 1;
     }
   }
 
@@ -756,7 +766,11 @@
       const dx = player.x - k.x;
       const dy = player.y - k.y;
       if (Math.hypot(dx, dy) < 11 + player.w * 0.3) {
-        damagePlayer();
+        if (player.shieldTimer > 0 || player.rocketTimer > 0) {
+          spawnShieldHit(k.x, k.y);
+        } else {
+          damagePlayer();
+        }
         k.dead = true;
       }
     }
