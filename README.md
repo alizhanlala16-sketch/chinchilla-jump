@@ -1,3 +1,5 @@
+[![Live](https://img.shields.io/badge/play-online-orange)](https://chinchilla-jump.vercel.app)
+
 # Chinchilla & Jump
 
 Браузерная вертикальная аркада: пушистая шиншилла прыгает по веткам волшебного леса, собирает сено и уворачивается от лис, пил и ледяных сосулек.
