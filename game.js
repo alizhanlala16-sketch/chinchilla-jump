@@ -114,6 +114,107 @@
       rotSpeed: rand(-0.04, 0.04),
     });
   }
+  const skyClouds = [];
+  for (let i = 0; i < 14; i += 1) {
+    skyClouds.push({
+      x: rand(-40, W + 40),
+      y: rand(-H * 2, H * 2),
+      scale: rand(0.6, 1.4),
+      speed: rand(0.04, 0.12),
+    });
+  }
+  const skyBirds = [];
+  for (let i = 0; i < 6; i += 1) {
+    skyBirds.push({
+      x: rand(0, W),
+      y: rand(-H, H),
+      scale: rand(0.7, 1.4),
+      flap: rand(0, Math.PI * 2),
+    });
+  }
+  const spaceStars = [];
+  for (let i = 0; i < 90; i += 1) {
+    spaceStars.push({
+      x: rand(0, W),
+      y: rand(-H * 2, H * 2),
+      r: rand(0.4, 2.0),
+      tw: rand(0, Math.PI * 2),
+      speed: rand(0.005, 0.02),
+    });
+  }
+  const spaceNebulae = [];
+  for (let i = 0; i < 5; i += 1) {
+    spaceNebulae.push({
+      x: rand(0, W),
+      y: rand(-H * 2, H * 2),
+      r: rand(80, 180),
+      hue: rand(200, 320),
+    });
+  }
+  const spacePlanets = [];
+  for (let i = 0; i < 4; i += 1) {
+    spacePlanets.push({
+      x: rand(40, W - 40),
+      y: rand(-H * 2, H * 2),
+      r: rand(18, 42),
+      hue: rand(15, 320),
+      ring: Math.random() < 0.4,
+    });
+  }
+  const alienRocks = [];
+  for (let i = 0; i < 9; i += 1) {
+    alienRocks.push({
+      x: rand(0, W),
+      y: rand(-H * 2, H * 2),
+      w: rand(40, 110),
+      h: rand(60, 160),
+      hue: rand(260, 340),
+    });
+  }
+  const alienMushrooms = [];
+  for (let i = 0; i < 8; i += 1) {
+    alienMushrooms.push({
+      x: rand(0, W),
+      y: rand(-H * 2, H * 2),
+      h: rand(60, 130),
+      capR: rand(14, 24),
+      hue: rand(280, 340),
+    });
+  }
+
+  const themeCycle = [
+    { name: "forest", length: 790 },
+    { name: "sky",    length: 10  },
+    { name: "space",  length: 200 },
+    { name: "alien",  length: 780 },
+    { name: "sky",    length: 10  },
+    { name: "space",  length: 200 },
+    { name: "forest", length: 790 },
+  ];
+  const themeCycleTotal = themeCycle.reduce(function (s, c) { return s + c.length; }, 0);
+
+  function getThemeBlend(h) {
+    const pos = ((h % themeCycleTotal) + themeCycleTotal) % themeCycleTotal;
+    let acc = 0;
+    for (let i = 0; i < themeCycle.length; i += 1) {
+      const seg = themeCycle[i];
+      if (pos < acc + seg.length) {
+        const local = pos - acc;
+        const fade = Math.max(4, Math.min(seg.length * 0.4, 60));
+        if (local < fade) {
+          const prev = themeCycle[(i - 1 + themeCycle.length) % themeCycle.length];
+          return { a: prev.name, b: seg.name, t: local / fade };
+        }
+        if (local > seg.length - fade) {
+          const next = themeCycle[(i + 1) % themeCycle.length];
+          return { a: seg.name, b: next.name, t: 1 - (seg.length - local) / fade };
+        }
+        return { a: seg.name, b: seg.name, t: 0 };
+      }
+      acc += seg.length;
+    }
+    return { a: "forest", b: "forest", t: 0 };
+  }
 
   function resetGame() {
     cameraY = 0;
@@ -1049,6 +1150,35 @@
   }
 
   function drawBackground() {
+    const bgHeight = Math.max(0, Math.floor((INITIAL_Y - cameraY) / 10));
+    const blend = getThemeBlend(bgHeight);
+    drawTheme(blend.a, 1 - blend.t);
+    if (blend.t > 0 && blend.b !== blend.a) {
+      drawTheme(blend.b, blend.t);
+    }
+    const forestWeight =
+      (blend.a === "forest" ? 1 - blend.t : 0) + (blend.b === "forest" ? blend.t : 0);
+    if (forestWeight > 0.05) {
+      ctx.save();
+      ctx.globalAlpha = forestWeight;
+      drawForegroundFoliage();
+      drawBackgroundLeaves();
+      ctx.restore();
+    }
+  }
+
+  function drawTheme(name, alpha) {
+    if (alpha <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, alpha);
+    if (name === "forest") drawForestBg();
+    else if (name === "sky") drawSkyBg();
+    else if (name === "space") drawSpaceBg();
+    else if (name === "alien") drawAlienBg();
+    ctx.restore();
+  }
+
+  function drawForestBg() {
     const gradient = ctx.createLinearGradient(0, 0, 0, H);
     gradient.addColorStop(0, "#1f3a2f");
     gradient.addColorStop(0.45, "#3c6a52");
@@ -1065,8 +1195,194 @@
 
     drawTreeLayer(forestTreesFar, 0.18, 22, 110, 0.55);
     drawTreeLayer(forestTreesNear, 0.42, 32, 150, 0.85);
-    drawForegroundFoliage();
-    drawBackgroundLeaves();
+  }
+
+  function drawSkyBg() {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#5fb1e6");
+    g.addColorStop(0.55, "#a8d8f0");
+    g.addColorStop(1, "#dfeef8");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    const sunX = W - 70;
+    const sunY = 70;
+    const sunGlow = ctx.createRadialGradient(sunX, sunY, 6, sunX, sunY, 120);
+    sunGlow.addColorStop(0, "rgba(255,240,180,0.7)");
+    sunGlow.addColorStop(1, "rgba(255,240,180,0)");
+    ctx.fillStyle = sunGlow;
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, 120, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#fff7d0";
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, 28, 0, Math.PI * 2);
+    ctx.fill();
+
+    const now = performance.now() * 0.0008;
+    for (const c of skyClouds) {
+      const px = ((c.x + now * c.speed * 60) % (W + 200) + W + 200) % (W + 200) - 80;
+      const py = ((c.y - cameraY * 0.15) % (H * 2) + H * 2) % (H * 2) - H * 0.5;
+      drawCloud(px, py, c.scale);
+    }
+
+    for (const b of skyBirds) {
+      const screenY = ((b.y - cameraY * 0.4) % (H * 2) + H * 2) % (H * 2) - H * 0.5;
+      const flap = Math.sin(now * 6 + b.flap) * 4;
+      ctx.strokeStyle = "rgba(40,40,50,0.7)";
+      ctx.lineWidth = 1.4 * b.scale;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(b.x - 8 * b.scale, screenY + flap);
+      ctx.quadraticCurveTo(b.x - 4 * b.scale, screenY - 3, b.x, screenY);
+      ctx.quadraticCurveTo(b.x + 4 * b.scale, screenY - 3, b.x + 8 * b.scale, screenY + flap);
+      ctx.stroke();
+    }
+  }
+
+  function drawCloud(x, y, scale) {
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    const r = 22 * scale;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.arc(x + r * 0.9, y - r * 0.3, r * 0.8, 0, Math.PI * 2);
+    ctx.arc(x + r * 1.7, y, r * 0.7, 0, Math.PI * 2);
+    ctx.arc(x + r * 0.6, y + r * 0.3, r * 0.7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(180,200,220,0.35)";
+    ctx.beginPath();
+    ctx.ellipse(x + r * 0.7, y + r * 0.5, r * 1.3, r * 0.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawSpaceBg() {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#040516");
+    g.addColorStop(0.6, "#0a0a2a");
+    g.addColorStop(1, "#1a0d35");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    for (const n of spaceNebulae) {
+      const screenY = ((n.y - cameraY * 0.1) % (H * 2) + H * 2) % (H * 2) - H * 0.5;
+      const grad = ctx.createRadialGradient(n.x, screenY, 0, n.x, screenY, n.r);
+      grad.addColorStop(0, "hsla(" + n.hue + ", 80%, 60%, 0.32)");
+      grad.addColorStop(0.6, "hsla(" + n.hue + ", 80%, 50%, 0.12)");
+      grad.addColorStop(1, "hsla(" + n.hue + ", 80%, 40%, 0)");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(n.x, screenY, n.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const now = performance.now() * 0.001;
+    for (const s of spaceStars) {
+      const screenY = ((s.y - cameraY * 0.05) % (H * 2) + H * 2) % (H * 2) - H * 0.5;
+      const tw = 0.6 + Math.sin(now * 4 * s.speed * 100 + s.tw) * 0.4;
+      ctx.fillStyle = "rgba(255,255,255," + tw.toFixed(3) + ")";
+      ctx.beginPath();
+      ctx.arc(s.x, screenY, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    for (const p of spacePlanets) {
+      const screenY = ((p.y - cameraY * 0.2) % (H * 2) + H * 2) % (H * 2) - H * 0.5;
+      const grad = ctx.createRadialGradient(p.x - p.r * 0.3, screenY - p.r * 0.3, p.r * 0.1, p.x, screenY, p.r);
+      grad.addColorStop(0, "hsl(" + p.hue + ", 70%, 70%)");
+      grad.addColorStop(0.7, "hsl(" + p.hue + ", 60%, 40%)");
+      grad.addColorStop(1, "hsl(" + p.hue + ", 50%, 22%)");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(p.x, screenY, p.r, 0, Math.PI * 2);
+      ctx.fill();
+      if (p.ring) {
+        ctx.strokeStyle = "hsla(" + p.hue + ", 70%, 75%, 0.55)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(p.x, screenY, p.r * 1.8, p.r * 0.45, 0.3, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+  }
+
+  function drawAlienBg() {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#2a0838");
+    g.addColorStop(0.45, "#7a1c5e");
+    g.addColorStop(1, "#d96ba0");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    const moon1Glow = ctx.createRadialGradient(80, 90, 4, 80, 90, 80);
+    moon1Glow.addColorStop(0, "rgba(255,200,230,0.5)");
+    moon1Glow.addColorStop(1, "rgba(255,200,230,0)");
+    ctx.fillStyle = moon1Glow;
+    ctx.beginPath();
+    ctx.arc(80, 90, 80, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#ffe2f0";
+    ctx.beginPath();
+    ctx.arc(80, 90, 26, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(160,80,120,0.35)";
+    ctx.beginPath();
+    ctx.arc(72, 86, 7, 0, Math.PI * 2);
+    ctx.arc(88, 95, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#fff3d8";
+    ctx.beginPath();
+    ctx.arc(W - 90, 130, 14, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(160,100,80,0.3)";
+    ctx.beginPath();
+    ctx.arc(W - 95, 128, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    for (let i = 0; i < 40; i += 1) {
+      const sx = (i * 73 + cameraY * 0.02) % W;
+      const sy = ((i * 113 - cameraY * 0.05) % (H * 0.6) + H * 0.6) % (H * 0.6);
+      ctx.beginPath();
+      ctx.arc(sx, sy, 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    for (const r of alienRocks) {
+      const screenY = ((r.y - cameraY * 0.25) % (H * 2) + H * 2) % (H * 2) - H * 0.5;
+      ctx.fillStyle = "hsla(" + r.hue + ", 50%, 25%, 0.85)";
+      ctx.beginPath();
+      ctx.moveTo(r.x, screenY);
+      ctx.lineTo(r.x - r.w * 0.4, screenY - r.h * 0.4);
+      ctx.lineTo(r.x - r.w * 0.1, screenY - r.h);
+      ctx.lineTo(r.x + r.w * 0.2, screenY - r.h * 0.7);
+      ctx.lineTo(r.x + r.w * 0.5, screenY - r.h * 0.3);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "hsla(" + r.hue + ", 60%, 50%, 0.4)";
+      ctx.beginPath();
+      ctx.moveTo(r.x, screenY);
+      ctx.lineTo(r.x - r.w * 0.1, screenY - r.h);
+      ctx.lineTo(r.x + r.w * 0.05, screenY - r.h * 0.9);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    for (const m of alienMushrooms) {
+      const screenY = ((m.y - cameraY * 0.35) % (H * 2) + H * 2) % (H * 2) - H * 0.5;
+      ctx.fillStyle = "hsla(" + m.hue + ", 35%, 65%, 0.85)";
+      ctx.fillRect(m.x - 3, screenY - m.h, 6, m.h);
+      ctx.fillStyle = "hsla(" + m.hue + ", 70%, 55%, 0.95)";
+      ctx.beginPath();
+      ctx.ellipse(m.x, screenY - m.h, m.capR, m.capR * 0.55, 0, Math.PI, 0);
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.7)";
+      ctx.beginPath();
+      ctx.arc(m.x - m.capR * 0.35, screenY - m.h - 1, 1.5, 0, Math.PI * 2);
+      ctx.arc(m.x + m.capR * 0.2, screenY - m.h - 2, 1.2, 0, Math.PI * 2);
+      ctx.arc(m.x + m.capR * 0.5, screenY - m.h, 1.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   function drawTreeLayer(trees, parallax, trunkW, treeH, alpha) {
