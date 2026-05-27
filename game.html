@@ -1,0 +1,57 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Chinchilla &amp; Jump — Игра</title>
+  <meta name="description" content="Chinchilla & Jump — прыгай по веткам, собирай сено, уклоняйся от лис и пил в волшебном лесу.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="game-page">
+  <a href="index.html" class="home-link">← На главную</a>
+  <div id="game-wrapper">
+    <canvas id="game" width="480" height="720"></canvas>
+    <div id="hud">
+      <div class="hud-item">
+        <span class="label">Сено</span>
+        <span id="score">0</span>
+      </div>
+      <div class="hud-item">
+        <span class="label">Высота</span>
+        <span id="height">0</span>
+      </div>
+      <div class="hud-item">
+        <span class="label">Рекорд</span>
+        <span id="best">0</span>
+      </div>
+    </div>
+    <div id="overlay" class="visible">
+      <h1>Chinchilla &amp; Jump</h1>
+      <p class="subtitle">Прыгай по веткам и собирай сено в волшебном лесу!</p>
+      <div class="controls">
+        <p><kbd>←</kbd> <kbd>→</kbd> или <kbd>A</kbd> <kbd>D</kbd> — движение (ПК)</p>
+        <p><kbd>Пробел</kbd> / <kbd>↑</kbd> / <kbd>W</kbd> — прыжок (ПК)</p>
+        <p class="controls-mobile">На телефоне: слева <strong>↑</strong> — прыжок, справа <strong>← →</strong> — движение</p>
+        <p>В воздухе ещё раз — двойной прыжок</p>
+        <p>Хрупкие ветки трескаются и через ~5 сек восстанавливаются</p>
+        <p><kbd>M</kbd> — музыка вкл/выкл</p>
+      </div>
+      <button id="start-btn">Играть</button>
+    </div>
+    <div id="gameover" class="hidden">
+      <h2>Упала!</h2>
+      <p>Сено: <span id="final-score">0</span></p>
+      <p>Высота: <span id="final-height">0</span></p>
+      <button id="restart-btn">Ещё раз</button>
+    </div>
+    <div id="mobile-controls" class="mobile-controls" aria-hidden="true">
+      <button type="button" class="ctrl-btn ctrl-jump" id="ctrl-jump" aria-label="Прыжок">↑</button>
+      <div class="ctrl-move">
+        <button type="button" class="ctrl-btn ctrl-left" id="ctrl-left" aria-label="Влево">←</button>
+        <button type="button" class="ctrl-btn ctrl-right" id="ctrl-right" aria-label="Вправо">→</button>
+      </div>
+    </div>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+.env
+.env.local
+.env.*.local
+.git
+.gitignore
+*.log
+deploy.ps1
+play.bat
+README.md
