@@ -1150,9 +1150,10 @@
   }
 
   function drawBackground() {
+    ctx.clearRect(0, 0, W, H);
     const bgHeight = Math.max(0, Math.floor((INITIAL_Y - cameraY) / 10));
     const blend = getThemeBlend(bgHeight);
-    drawTheme(blend.a, 1 - blend.t);
+    drawTheme(blend.a, 1);
     if (blend.t > 0 && blend.b !== blend.a) {
       drawTheme(blend.b, blend.t);
     }
