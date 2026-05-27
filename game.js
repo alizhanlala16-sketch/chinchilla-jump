@@ -29,6 +29,9 @@
   const ROCKET_LIFT = -8.5;
   const SHIELD_DURATION = 1140;
   const SHIELD_RESCUE_INDEX = 3;
+  const LASER_DURATION = 900;
+  const LASER_LENGTH = 1600;
+  const LASER_HALF_WIDTH = 6;
 
   const PLATFORM_TYPES = {
     grass: { color: "#4f7d3a", edge: "#3a5e29", breakable: false, moving: false },
@@ -76,6 +79,7 @@
     invincibleTimer: 0,
     rocketTimer: 0,
     shieldTimer: 0,
+    laserTimer: 0,
   };
 
   let platforms = [];
@@ -90,6 +94,7 @@
   let apples = [];
   let rockets = [];
   let shields = [];
+  let lasers = [];
 
   const forestTreesFar = [];
   const forestTreesNear = [];
@@ -243,6 +248,7 @@
     player.invincibleTimer = 0;
     player.rocketTimer = 0;
     player.shieldTimer = 0;
+    player.laserTimer = 0;
     platforms = [];
     hays = [];
     saws = [];
@@ -254,6 +260,7 @@
     apples = [];
     rockets = [];
     shields = [];
+    lasers = [];
 
     const start = {
       x: W / 2 - 80,
@@ -375,6 +382,17 @@
       });
     }
 
+    if (type !== "fragile" && Math.random() < 0.010) {
+      lasers.push({
+        platform,
+        offsetX: rand(-platform.w * 0.15, platform.w * 0.15),
+        offsetY: -26,
+        collected: false,
+        bob: rand(0, Math.PI * 2),
+        r: 13,
+      });
+    }
+
     if (type !== "fragile" && Math.random() < 0.08) {
       squirrels.push({
         platform,
@@ -401,6 +419,7 @@
     apples = apples.filter((a) => !a.collected && a.platform.y < cameraY + H + 200);
     rockets = rockets.filter((r) => !r.collected && r.platform.y < cameraY + H + 200);
     shields = shields.filter((s) => !s.collected && s.platform.y < cameraY + H + 200);
+    lasers = lasers.filter((l) => !l.collected && l.platform.y < cameraY + H + 200);
   }
 
   let audioCtx = null;
@@ -619,7 +638,7 @@
       }
     }
 
-    saws = saws.filter((s) => s.y < cameraY + H + 200);
+    saws = saws.filter((s) => !s.dead && s.y < cameraY + H + 200);
     foxes = foxes.filter((f) => f.y < cameraY + H + 200 && f.life > 0);
     knives = knives.filter((k) =>
       k.x > -30 && k.x < W + 30 &&
@@ -917,6 +936,10 @@
       }
     }
     if (player.shieldTimer > 0) player.shieldTimer -= 1;
+    if (player.laserTimer > 0) {
+      player.laserTimer -= 1;
+      processLaserHits();
+    }
   }
 
   function updateHays() {
@@ -2641,6 +2664,10 @@
     }
     if (player.shieldTimer > 0) {
       drawPowerupIcon(baseX + offset, baseY, player.shieldTimer / SHIELD_DURATION, "shield");
+      offset += 36;
+    }
+    if (player.laserTimer > 0) {
+      drawPowerupIcon(baseX + offset, baseY, player.laserTimer / LASER_DURATION, "laser");
     }
   }
 
@@ -2690,7 +2717,7 @@
       ctx.quadraticCurveTo(0, 11, 3, 5);
       ctx.closePath();
       ctx.fill();
-    } else {
+    } else if (kind === "shield") {
       ctx.fillStyle = "#3a8dc4";
       ctx.beginPath();
       ctx.moveTo(0, -7);
@@ -2705,8 +2732,284 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText("★", 0, 1);
+    } else if (kind === "laser") {
+      ctx.fillStyle = "#7a7e94";
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 7, 4.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#bcc1d4";
+      ctx.beginPath();
+      ctx.ellipse(0, -1, 6, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#ff4a5c";
+      ctx.beginPath();
+      ctx.arc(-3, -0.5, 1.4, 0, Math.PI * 2);
+      ctx.arc(3, -0.5, 1.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,80,110,0.95)";
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(-3, -0.5); ctx.lineTo(-7, -5);
+      ctx.moveTo(3, -0.5); ctx.lineTo(7, -5);
+      ctx.stroke();
     }
 
+    ctx.restore();
+  }
+  function updateLasers() {
+    for (const l of lasers) {
+      if (l.collected || l.platform.broken) continue;
+      l.bob += 0.08;
+      const lx = l.platform.x + l.platform.w / 2 + l.offsetX;
+      const ly = l.platform.y + l.offsetY;
+      const dx = player.x - lx;
+      const dy = player.y - ly;
+      if (Math.hypot(dx, dy) < player.w * 0.55 + l.r) {
+        l.collected = true;
+        player.laserTimer = LASER_DURATION;
+        score += 25;
+        spawnSparkles(lx, ly);
+        playSnort(2.0, 0.3);
+        updateHud();
+      }
+    }
+  }
+
+  function getLaserBeams() {
+    if (player.laserTimer <= 0) return [];
+    const earY = player.y - 18;
+    const dx = 11;
+    const ang1 = -Math.PI / 2 - 0.42;
+    const ang2 = -Math.PI / 2 + 0.42;
+    return [
+      { x: player.x - dx, y: earY, dx: Math.cos(ang1), dy: Math.sin(ang1) },
+      { x: player.x + dx, y: earY, dx: Math.cos(ang2), dy: Math.sin(ang2) },
+    ];
+  }
+
+  function pointHitsBeam(b, px, py, rad) {
+    const vx = px - b.x;
+    const vy = py - b.y;
+    const t = vx * b.dx + vy * b.dy;
+    if (t < 0 || t > LASER_LENGTH) return false;
+    const projX = b.x + b.dx * t;
+    const projY = b.y + b.dy * t;
+    const ddx = px - projX;
+    const ddy = py - projY;
+    const r = rad + LASER_HALF_WIDTH;
+    return ddx * ddx + ddy * ddy <= r * r;
+  }
+
+  function spawnLaserBurst(x, y, color) {
+    for (let i = 0; i < 16; i += 1) {
+      const a = (i / 16) * Math.PI * 2;
+      particles.push({
+        x: x,
+        y: y,
+        vx: Math.cos(a) * rand(2, 5),
+        vy: Math.sin(a) * rand(2, 5),
+        life: rand(20, 36),
+        maxLife: 36,
+        color: color || "rgba(255,100,120,0.95)",
+        size: rand(2, 4),
+      });
+    }
+    for (let i = 0; i < 6; i += 1) {
+      particles.push({
+        x: x + rand(-5, 5),
+        y: y + rand(-5, 5),
+        vx: rand(-1, 1),
+        vy: rand(-3, -0.5),
+        life: 38,
+        maxLife: 38,
+        color: "rgba(255,220,180,0.9)",
+        size: 3.5,
+      });
+    }
+  }
+
+  function processLaserHits() {
+    const beams = getLaserBeams();
+    if (beams.length === 0) return;
+
+    for (const saw of saws) {
+      if (saw.dead) continue;
+      for (const b of beams) {
+        if (pointHitsBeam(b, saw.x, saw.y, saw.r)) {
+          saw.dead = true;
+          spawnLaserBurst(saw.x, saw.y, "rgba(255,140,80,0.95)");
+          score += 15;
+          updateHud();
+          break;
+        }
+      }
+    }
+
+    for (const k of knives) {
+      if (k.dead) continue;
+      for (const b of beams) {
+        if (pointHitsBeam(b, k.x, k.y, 10)) {
+          k.dead = true;
+          spawnLaserBurst(k.x, k.y, "rgba(255,200,80,0.95)");
+          score += 5;
+          updateHud();
+          break;
+        }
+      }
+    }
+
+    for (const fox of foxes) {
+      if (fox.life <= 0) continue;
+      for (const b of beams) {
+        if (pointHitsBeam(b, fox.x, fox.y - 18, 36)) {
+          fox.life = 0;
+          spawnLaserBurst(fox.x, fox.y - 18, "rgba(255,120,80,0.95)");
+          spawnFurBurst(fox.x, fox.y - 14);
+          score += 60;
+          updateHud();
+          break;
+        }
+      }
+    }
+
+    for (const sq of squirrels) {
+      if (sq.dead) continue;
+      const p = getSquirrelPos(sq);
+      for (const b of beams) {
+        if (pointHitsBeam(b, p.x, p.y, 14)) {
+          sq.dead = true;
+          spawnLaserBurst(p.x, p.y, "rgba(255,180,140,0.95)");
+          spawnFurBurst(p.x, p.y);
+          score += 5;
+          updateHud();
+          break;
+        }
+      }
+    }
+  }
+
+  function drawLasers() {
+    for (const l of lasers) {
+      if (l.collected || l.platform.broken) continue;
+      const lx = l.platform.x + l.platform.w / 2 + l.offsetX;
+      const baseY = l.platform.y + l.offsetY + Math.sin(l.bob) * 3;
+      const screenY = baseY - cameraY;
+      if (screenY < -30 || screenY > H + 30) continue;
+
+      ctx.save();
+      ctx.translate(lx, screenY);
+
+      ctx.fillStyle = "rgba(0,0,0,0.22)";
+      ctx.beginPath();
+      ctx.ellipse(0, 16, 12, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, 22);
+      glow.addColorStop(0, "rgba(255,120,150,0.5)");
+      glow.addColorStop(1, "rgba(255,120,150,0)");
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(0, 0, 22, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#5a5e72";
+      ctx.beginPath();
+      ctx.ellipse(0, 2, 11, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#8c93aa";
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 12, 7, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#cdd4e6";
+      ctx.beginPath();
+      ctx.ellipse(0, -1.5, 9, 4.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#ff4a5c";
+      ctx.beginPath();
+      ctx.arc(-5, -1, 2.5, 0, Math.PI * 2);
+      ctx.arc(5, -1, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#ffd0d4";
+      ctx.beginPath();
+      ctx.arc(-5.7, -1.7, 0.9, 0, Math.PI * 2);
+      ctx.arc(4.3, -1.7, 0.9, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = "#2a2e3d";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(-12, -2);
+      ctx.lineTo(-18, -8);
+      ctx.moveTo(12, -2);
+      ctx.lineTo(18, -8);
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(255,200,210," + (0.5 + Math.sin(l.bob * 2) * 0.3).toFixed(2) + ")";
+      ctx.beginPath();
+      ctx.arc(-18, -8, 1.6, 0, Math.PI * 2);
+      ctx.arc(18, -8, 1.6, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+  }
+
+  function drawLaserBeams() {
+    if (player.laserTimer <= 0) return;
+    const beams = getLaserBeams();
+    const t = player.laserTimer / LASER_DURATION;
+    const flicker = 0.85 + Math.sin(player.blinkTimer * 0.6) * 0.15;
+    const blink = t < 0.18 ? (0.45 + Math.sin(player.blinkTimer * 0.7) * 0.4) : 1.0;
+    const alpha = Math.max(0, flicker * blink);
+
+    ctx.save();
+    for (const b of beams) {
+      const sx = b.x - 0;
+      const sy = b.y - cameraY;
+      const ex = b.x + b.dx * LASER_LENGTH;
+      const ey = b.y + b.dy * LASER_LENGTH - cameraY;
+
+      const grad = ctx.createLinearGradient(sx, sy, ex, ey);
+      grad.addColorStop(0, "rgba(255,80,110," + (alpha).toFixed(2) + ")");
+      grad.addColorStop(0.3, "rgba(255,140,160," + (alpha).toFixed(2) + ")");
+      grad.addColorStop(1, "rgba(255,180,200,0)");
+
+      ctx.lineCap = "round";
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 14;
+      ctx.globalAlpha = 0.35 * alpha;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+
+      ctx.lineWidth = 6;
+      ctx.globalAlpha = 0.85 * alpha;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+
+      ctx.strokeStyle = "rgba(255,255,255," + (0.95 * alpha).toFixed(2) + ")";
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 1;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(255,255,255," + (0.9 * alpha).toFixed(2) + ")";
+      ctx.beginPath();
+      ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,140,160," + (0.8 * alpha).toFixed(2) + ")";
+      ctx.beginPath();
+      ctx.arc(sx, sy, 9, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.restore();
   }
   function drawLives() {
@@ -3437,12 +3740,14 @@
     drawApples();
     drawRockets();
     drawShields();
+    drawLasers();
     drawSaws();
     drawKnives();
     drawParticles();
     drawRocketAura();
     drawChinchilla();
     drawShieldAura();
+    drawLaserBeams();
     drawDoubleJumpIndicator();
     drawLives();
     drawPowerupTimers();
@@ -3457,6 +3762,7 @@
     updateApples();
     updateRockets();
     updateShields();
+    updateLasers();
     updateSaws();
     updateFoxes();
     updateKnives();
