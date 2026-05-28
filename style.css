@@ -526,6 +526,14 @@ button:hover {
   margin-top: 6px;
 }
 
+.mode-hint {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: rgba(255, 224, 138, 0.92);
+  max-width: 320px;
+}
+
 .play-modes {
   width: 100%;
 }

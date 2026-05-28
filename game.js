@@ -167,10 +167,24 @@
   let lastGameMode = "arcade";
   let currentLevel = 1;
   let levelProgress = 1;
-  let levelClearedUpTo = 0;
+  let levelOrient = "vertical";
+  let cameraX = 0;
+  let worldWidth = W;
+  let portal = null;
+  let levelTransitionTimer = 0;
+  const PORTAL_SUCK_DURATION = 90;
+  let portalSuckFrom = { x: 0, y: 0 };
   let levelBannerTimer = 0;
   let levelBannerText = "";
   const LEVEL_PROGRESS_KEY = "chinchilla-level-progress";
+  const LEVEL_DEFS = [
+    { orient: "vertical", label: "Лес вверх" },
+    { orient: "horizontal", label: "Ветка вправо" },
+    { orient: "vertical", label: "К облакам" },
+    { orient: "horizontal", label: "Через лес" },
+    { orient: "vertical", label: "К вершине" },
+    { orient: "horizontal", label: "Дальняя ветка" },
+  ];
   let cameraY = 0;
   let score = 0;
   let bestScore = Number(localStorage.getItem("chinchilla-best") || 0);
@@ -193,8 +207,109 @@
     try { localStorage.setItem(LEVEL_PROGRESS_KEY, String(levelProgress)); } catch (e) {}
   }
 
-  function getLevelTarget(lv) {
-    return 35 + (lv - 1) * 40;
+  function getLevelDef(levelNum) {
+    return LEVEL_DEFS[(levelNum - 1) % LEVEL_DEFS.length];
+  }
+
+  function makePlatform(x, y, w, type) {
+    return {
+      x,
+      y,
+      w,
+      h: 16,
+      type: type || "grass",
+      broken: false,
+      respawnTimer: 0,
+      moveDir: 1,
+      moveSpeed: 1.4,
+      spawnSide: "center",
+      extending: false,
+      extendTarget: x,
+      fragileTimer: 0,
+      triggered: false,
+      shake: 0,
+      deltaX: 0,
+    };
+  }
+
+  function buildVerticalLevel(levelNum) {
+    levelOrient = "vertical";
+    cameraX = 0;
+    worldWidth = W;
+    cameraY = 0;
+    const steps = 7 + Math.min(Math.floor((levelNum - 1) / 2), 4);
+    const startY = H - 80;
+    platforms.push(makePlatform(W / 2 - 80, startY, 160, "grass"));
+    let y = startY;
+    for (let i = 1; i < steps; i += 1) {
+      y -= PLATFORM_GAP + rand(-8, 8);
+      const w = rand(85, 125);
+      const x = clamp(rand(25, W - w - 25), 15, W - w - 15);
+      platforms.push(makePlatform(x, y, w, i % 2 === 0 ? "log" : "grass"));
+    }
+    const portalY = y - PLATFORM_GAP * 0.55;
+    platforms.push(makePlatform(W / 2 - 72, portalY, 144, "log"));
+    portal = { x: W / 2, y: portalY - 40, r: 36, active: true, spin: 0, pulse: 0 };
+    player.x = W / 2;
+    player.y = startY - 36;
+    player.vx = 0;
+    player.vy = 0;
+    player.grounded = false;
+    player.jumpsLeft = 2;
+    highestPlatformY = portalY;
+  }
+
+  function buildHorizontalLevel(levelNum) {
+    levelOrient = "horizontal";
+    const steps = 5 + Math.min(Math.floor((levelNum - 1) / 2), 5);
+    const groundY = H - 110;
+    worldWidth = 200 + steps * 98 + 140;
+    cameraX = 0;
+    cameraY = Math.max(0, groundY - CAMERA_FOLLOW + 10);
+    platforms.push(makePlatform(8, groundY, 118, "grass"));
+    let x = 40;
+    for (let i = 1; i < steps; i += 1) {
+      x += rand(78, 108);
+      const dy = rand(-32, 28);
+      platforms.push(makePlatform(x, groundY + dy, rand(84, 120), i % 3 === 0 ? "log" : "grass"));
+    }
+    x = worldWidth - 128;
+    platforms.push(makePlatform(x, groundY, 120, "log"));
+    portal = { x: worldWidth - 52, y: groundY - 44, r: 36, active: true, spin: 0, pulse: 0 };
+    player.x = 64;
+    player.y = groundY - 36;
+    player.vx = 0;
+    player.vy = 0;
+    player.grounded = false;
+    player.jumpsLeft = 2;
+    highestPlatformY = groundY - 200;
+  }
+
+  function initLevelWorld(levelNum) {
+    currentLevel = levelNum;
+    platforms = [];
+    hays = [];
+    saws = [];
+    foxes = [];
+    knives = [];
+    squirrels = [];
+    apples = [];
+    rockets = [];
+    shields = [];
+    lasers = [];
+    portal = null;
+    levelTransitionTimer = 0;
+    player.standingOn = null;
+    player.invincibleTimer = 0;
+    player.rocketTimer = 0;
+    player.shieldTimer = 0;
+    player.laserTimer = 0;
+    const def = getLevelDef(levelNum);
+    if (def.orient === "horizontal") buildHorizontalLevel(levelNum);
+    else buildVerticalLevel(levelNum);
+    levelBannerText = "Уровень " + levelNum + " · " + (def.orient === "horizontal" ? "беги вправо к порталу →" : "прыгай вверх к порталу ↑");
+    levelBannerTimer = 130;
+    updateModeHud();
   }
 
   function updateModeHud() {
@@ -203,28 +318,209 @@
     if (hudGoalItem) hudGoalItem.classList.toggle("hidden", !isLevels);
     if (isLevels) {
       if (levelNumEl) levelNumEl.textContent = currentLevel;
-      if (levelGoalEl) levelGoalEl.textContent = getLevelTarget(currentLevel);
+      if (levelGoalEl) {
+        const def = getLevelDef(currentLevel);
+        levelGoalEl.textContent = def.orient === "horizontal" ? "→" : "↑";
+      }
     }
   }
 
-  function completeLevel() {
-    const cleared = currentLevel;
-    saveLevelProgress(cleared + 1);
-    currentLevel = cleared + 1;
-    levelClearedUpTo = cleared;
-    levelBannerTimer = 150;
-    levelBannerText = "Уровень " + cleared + " пройден!";
-    score += 50;
-    spawnSparkles(player.x, player.y);
-    playSnort(1.25, 0.28);
-    updateHud();
-    updateModeHud();
+  function portalSuckProgress() {
+    if (levelTransitionTimer <= 0) return 0;
+    return 1 - levelTransitionTimer / PORTAL_SUCK_DURATION;
   }
 
-  function checkLevelComplete() {
-    if (gameMode !== "levels" || state !== "playing") return;
-    if (currentLevel <= levelClearedUpTo) return;
-    if (maxHeight >= getLevelTarget(currentLevel)) completeLevel();
+  function spawnPortalSuckParticle() {
+    if (!portal) return;
+    const angle = rand(0, Math.PI * 2);
+    const dist = rand(portal.r * 1.4, portal.r * 3.8);
+    particles.push({
+      x: portal.x + Math.cos(angle) * dist,
+      y: portal.y + Math.sin(angle) * dist * 0.55,
+      vx: 0,
+      vy: 0,
+      life: rand(14, 26),
+      maxLife: 26,
+      color: "rgba(210,160,255,0.95)",
+      size: rand(2, 4.5),
+      portalSuck: true,
+      portalX: portal.x,
+      portalY: portal.y,
+    });
+  }
+
+  function updatePortalSuckMotion() {
+    if (!portal) return;
+    const t = portalSuckProgress();
+    const ease = t * t * t;
+    const spiralR = (1 - t) * (18 + portal.r * 0.3);
+    const spiralA = t * Math.PI * 5.5;
+    const baseX = portalSuckFrom.x + (portal.x - portalSuckFrom.x) * ease;
+    const baseY = portalSuckFrom.y + (portal.y - portalSuckFrom.y) * ease;
+    player.x = baseX + Math.cos(spiralA) * spiralR;
+    player.y = baseY + Math.sin(spiralA) * spiralR * 0.42;
+    player.squash = Math.max(0.05, 1 - ease * 0.95);
+    player.suckAlpha = t < 0.75 ? 1 : 1 - (t - 0.75) / 0.25;
+    player.suckSpin = ease * Math.PI * 3.2 * player.facing;
+    player.earWobble = ease * 3;
+    portal.spin += 0.1 + ease * 0.4;
+    if (levelTransitionTimer % 3 === 0) spawnPortalSuckParticle();
+    if (levelTransitionTimer % 10 === 0) {
+      spawnSparkles(portal.x + rand(-10, 10), portal.y + rand(-6, 6));
+    }
+    if (levelOrient === "horizontal") {
+      const targetCameraX = player.x - W * 0.38;
+      cameraX = clamp(targetCameraX, 0, Math.max(0, worldWidth - W));
+    } else {
+      const targetCameraY = player.y - CAMERA_FOLLOW;
+      if (targetCameraY < cameraY) cameraY = targetCameraY;
+    }
+  }
+
+  function onPortalReached() {
+    if (!portal || !portal.active || levelTransitionTimer > 0) return;
+    portal.active = false;
+    portalSuckFrom.x = player.x;
+    portalSuckFrom.y = player.y;
+    player.suckAlpha = 1;
+    player.suckSpin = 0;
+    levelTransitionTimer = PORTAL_SUCK_DURATION;
+    const cleared = currentLevel;
+    saveLevelProgress(cleared + 1);
+    score += 50;
+    spawnSparkles(portal.x, portal.y);
+    spawnSparkles(player.x, player.y);
+    playSnort(1.4, 0.3);
+    levelBannerText = "Уровень " + cleared + " пройден!";
+    levelBannerTimer = 140;
+    updateHud();
+  }
+
+  function updateLevelTransition() {
+    if (levelTransitionTimer <= 0) return;
+    levelTransitionTimer -= 1;
+    if (levelTransitionTimer === 0) {
+      initLevelWorld(currentLevel + 1);
+    }
+  }
+
+  function checkPortalCollision() {
+    if (gameMode !== "levels" || state !== "playing" || !portal || !portal.active) return;
+    if (levelTransitionTimer > 0) return;
+    const dx = player.x - portal.x;
+    const dy = player.y - portal.y;
+    if (Math.hypot(dx, dy) < portal.r + player.w * 0.28) onPortalReached();
+  }
+
+  function drawPortal() {
+    if (!portal || gameMode !== "levels") return;
+    const sucking = levelTransitionTimer > 0;
+    const suckT = portalSuckProgress();
+    portal.spin += sucking ? 0.1 + suckT * 0.35 : 0.07;
+    portal.pulse = (portal.pulse || 0) + 0.06;
+    const sx = portal.x;
+    const sy = portal.y - cameraY;
+    const pulse = sucking
+      ? 1 + suckT * 0.45 + Math.sin(portal.spin * 3) * 0.12
+      : 1 + Math.sin(portal.pulse) * 0.14;
+    ctx.save();
+    ctx.translate(sx, sy);
+    const glowR = portal.r * (sucking ? 2.4 : 2.1) * pulse;
+    const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, glowR);
+    if (sucking) {
+      glow.addColorStop(0, "rgba(220,160,255,0.95)");
+      glow.addColorStop(0.45, "rgba(140,80,220,0.55)");
+      glow.addColorStop(1, "rgba(80,40,160,0)");
+    } else {
+      glow.addColorStop(0, portal.active ? "rgba(200,130,255,0.9)" : "rgba(120,120,120,0.4)");
+      glow.addColorStop(0.5, "rgba(140,80,220,0.45)");
+      glow.addColorStop(1, "rgba(80,40,160,0)");
+    }
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(0, 0, glowR, 0, Math.PI * 2);
+    ctx.fill();
+    if (sucking) {
+      ctx.strokeStyle = "rgba(230,200,255," + (0.35 + suckT * 0.55).toFixed(2) + ")";
+      ctx.lineWidth = 2;
+      for (let arm = 0; arm < 5; arm += 1) {
+        ctx.beginPath();
+        for (let s = 0; s <= 28; s += 1) {
+          const frac = s / 28;
+          const r = portal.r * (1.7 - frac * 1.35) * (1 + suckT * 0.25);
+          const a = portal.spin * 2.2 + arm * (Math.PI * 2 / 5) + frac * Math.PI * 1.6;
+          const px = Math.cos(a) * r;
+          const py = Math.sin(a) * r * 0.55;
+          if (s === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      }
+    }
+    ctx.strokeStyle = sucking
+      ? "rgba(240,210,255,0.98)"
+      : portal.active ? "rgba(240,200,255,0.98)" : "rgba(160,160,160,0.6)";
+    ctx.lineWidth = sucking ? 4 : 3.5;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, portal.r * 0.58 * pulse, portal.r * pulse, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(120,60,200,0.35)";
+    ctx.fill();
+    ctx.rotate(portal.spin);
+    ctx.strokeStyle = sucking ? "rgba(255,245,255,0.9)" : "rgba(255,240,255,0.9)";
+    ctx.lineWidth = sucking ? 2.5 : 2;
+    for (let i = 0; i < 6; i += 1) {
+      ctx.beginPath();
+      ctx.moveTo(0, -portal.r * 0.35);
+      ctx.lineTo(0, -portal.r * (sucking ? 1.15 : 1.05));
+      ctx.stroke();
+      ctx.rotate(Math.PI / 3);
+    }
+    ctx.restore();
+  }
+
+  function drawPortalGuide() {
+    if (gameMode !== "levels" || state !== "playing" || !portal || !portal.active) return;
+    if (levelTransitionTimer > 0) return;
+    const px = portal.x - cameraX;
+    const py = portal.y - cameraY;
+    const margin = 44;
+    const onScreen = px > margin && px < W - margin && py > margin && py < H - margin;
+    ctx.save();
+    if (onScreen) {
+      const bob = Math.sin((portal.pulse || 0) * 1.4) * 4;
+      ctx.fillStyle = "rgba(230,200,255,0.95)";
+      ctx.strokeStyle = "rgba(80,40,140,0.8)";
+      ctx.lineWidth = 2;
+      ctx.font = "bold 15px Segoe UI, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "bottom";
+      const label = levelOrient === "horizontal" ? "Портал →" : "Портал ↑";
+      ctx.strokeText(label, px, py - portal.r - 10 + bob);
+      ctx.fillText(label, px, py - portal.r - 10 + bob);
+    } else {
+      const cx = clamp(px, margin, W - margin);
+      const cy = clamp(py, margin, H - margin);
+      const angle = Math.atan2(py - H * 0.42, px - W * 0.5);
+      ctx.translate(cx, cy);
+      ctx.rotate(angle);
+      ctx.fillStyle = "rgba(200,150,255,0.92)";
+      ctx.strokeStyle = "rgba(255,255,255,0.85)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(18, 0);
+      ctx.lineTo(-10, -12);
+      ctx.lineTo(-10, 12);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 12px Segoe UI, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("Портал", 0, -22);
+    }
+    ctx.restore();
   }
 
   function drawLevelBanner() {
@@ -265,6 +561,8 @@
     rocketTimer: 0,
     shieldTimer: 0,
     laserTimer: 0,
+    suckAlpha: 1,
+    suckSpin: 0,
   };
 
   let platforms = [];
@@ -417,9 +715,26 @@
 
   function resetGame() {
     cameraY = 0;
+    cameraX = 0;
     score = 0;
     maxHeight = 0;
     particles = [];
+    player.lives = 3;
+    player.invincibleTimer = 0;
+    player.rocketTimer = 0;
+    player.shieldTimer = 0;
+    player.laserTimer = 0;
+    levelBannerTimer = 0;
+    levelBannerText = "";
+    levelTransitionTimer = 0;
+    portal = null;
+
+    if (gameMode === "levels") {
+      initLevelWorld(levelProgress);
+      updateHud();
+      return;
+    }
+
     player.x = W / 2;
     player.y = INITIAL_Y;
     player.vx = 0;
@@ -470,13 +785,6 @@
 
     for (let i = 1; i < 14; i += 1) {
       spawnPlatform(highestPlatformY - PLATFORM_GAP);
-    }
-
-    levelBannerTimer = 0;
-    levelBannerText = "";
-    levelClearedUpTo = 0;
-    if (gameMode === "levels") {
-      currentLevel = levelProgress;
     }
 
     updateHud();
@@ -1036,6 +1344,16 @@
   }
 
   function updatePlayer() {
+    if (gameMode === "levels" && levelTransitionTimer > 0) {
+      updatePortalSuckMotion();
+      player.vx = 0;
+      player.vy = 0;
+      player.grounded = false;
+      player.standingOn = null;
+      player.blinkTimer += 1;
+      return;
+    }
+
     let move = 0;
     if (keys.has("ArrowLeft") || keys.has("a") || keys.has("A")) move -= 1;
     if (keys.has("ArrowRight") || keys.has("d") || keys.has("D")) move += 1;
@@ -1060,11 +1378,19 @@
     player.x += player.vx;
     player.y += player.vy;
 
-    if (player.x < player.w / 2) {
+    if (gameMode === "levels" && levelOrient === "horizontal") {
+      if (player.x < player.w / 2) {
+        player.x = player.w / 2;
+        player.vx = 0;
+      }
+      if (player.x > worldWidth - player.w / 2) {
+        player.x = worldWidth - player.w / 2;
+        player.vx = 0;
+      }
+    } else if (player.x < player.w / 2) {
       player.x = player.w / 2;
       player.vx = 0;
-    }
-    if (player.x > W - player.w / 2) {
+    } else if (player.x > W - player.w / 2) {
       player.x = W - player.w / 2;
       player.vx = 0;
     }
@@ -1101,14 +1427,19 @@
 
     if (!player.grounded) player.standingOn = null;
 
-    const targetCameraY = player.y - CAMERA_FOLLOW;
-    if (targetCameraY < cameraY) {
-      cameraY = targetCameraY;
+    if (gameMode === "levels" && levelOrient === "horizontal") {
+      const targetCameraX = player.x - W * 0.38;
+      cameraX = clamp(targetCameraX, 0, Math.max(0, worldWidth - W));
+      cameraY = Math.max(0, (H - 110) - CAMERA_FOLLOW + 10);
+    } else {
+      cameraX = 0;
+      const targetCameraY = player.y - CAMERA_FOLLOW;
+      if (targetCameraY < cameraY) cameraY = targetCameraY;
     }
 
     const currentHeight = Math.max(0, Math.floor((INITIAL_Y - player.y) / 10));
     maxHeight = Math.max(maxHeight, currentHeight);
-    checkLevelComplete();
+    checkPortalCollision();
 
     if (player.y - cameraY > H + 60) {
       if (player.shieldTimer > 0) {
@@ -1155,9 +1486,24 @@
 
   function updateParticles() {
     particles = particles.filter((p) => {
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vy += 0.08;
+      if (p.portalSuck) {
+        const dx = p.portalX - p.x;
+        const dy = p.portalY - p.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        const pull = 0.15 + (1 - p.life / p.maxLife) * 0.45;
+        p.vx += (dx / dist) * pull * 5;
+        p.vy += (dy / dist) * pull * 5;
+        p.vx *= 0.88;
+        p.vy *= 0.88;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.size *= 0.97;
+        if (dist < 8) p.life = 0;
+      } else {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.08;
+      }
       p.life -= 1;
       return p.life > 0;
     });
@@ -1194,7 +1540,7 @@
     if (gameMode === "levels") {
       if (gameoverTitleEl) gameoverTitleEl.textContent = "Не вышло!";
       if (finalModeLineEl) {
-        finalModeLineEl.textContent = "Уровни · уровень " + currentLevel + " (цель: " + getLevelTarget(currentLevel) + ")";
+        finalModeLineEl.textContent = "Уровни · не дошла до портала (уровень " + currentLevel + ")";
         finalModeLineEl.classList.remove("hidden");
       }
       if (rankLine) rankLine.classList.add("hidden");
@@ -1705,13 +2051,14 @@
   }
 
   function startGame(mode) {
-    if (mode === "levels" || mode === "arcade") lastGameMode = mode;
+    if (mode !== "levels" && mode !== "arcade") return;
+    lastGameMode = mode;
     const name = commitPlayerNameFromOverlay();
     if (!name) {
       promptPlayerNameRequired();
       return;
     }
-    actuallyStartGame(lastGameMode);
+    actuallyStartGame(mode);
   }
 
   function actuallyStartGame(mode) {
@@ -2325,6 +2672,8 @@
 
   function drawChinchilla() {
     if (player.shieldTimer === 0 && player.rocketTimer === 0 && player.invincibleTimer > 0 && Math.floor(player.invincibleTimer / 5) % 2 === 0) return;
+    const sucking = gameMode === "levels" && levelTransitionTimer > 0;
+    if (sucking && player.suckAlpha <= 0.02) return;
     const pal = getSkinPalette();
     const screenY = player.y - cameraY;
     const sx = player.squash;
@@ -2334,10 +2683,13 @@
 
     ctx.save();
     ctx.translate(player.x, screenY);
+    if (sucking) ctx.globalAlpha = player.suckAlpha;
+    if (sucking) ctx.rotate(player.suckSpin);
 
-    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    const shadowScale = sucking ? Math.max(0.15, player.squash) : 1;
+    ctx.fillStyle = "rgba(0,0,0," + (sucking ? 0.15 * player.suckAlpha : 0.25) + ")";
     ctx.beginPath();
-    ctx.ellipse(0, 22, 22, 5, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 22, 22 * shadowScale, 5 * shadowScale, 0, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.scale(player.facing * sx, sy);
@@ -4220,6 +4572,8 @@
   }
 
   function render() {    drawBackground();
+    ctx.save();
+    ctx.translate(-cameraX, 0);
     drawFoxes();
     drawPlatforms();
     drawSquirrels();
@@ -4231,10 +4585,13 @@
     drawSaws();
     drawKnives();
     drawParticles();
+    drawPortal();
     drawRocketAura();
     drawChinchilla();
     drawShieldAura();
     drawLaserBeams();
+    ctx.restore();
+    drawPortalGuide();
     drawDoubleJumpIndicator();
     drawLives();
     drawPowerupTimers();
@@ -4256,8 +4613,12 @@
     updateKnives();
     updateSquirrels();
     updateParticles();
-    ensurePlatforms();
-    ensureHazards();
+    if (gameMode === "levels") {
+      updateLevelTransition();
+    } else {
+      ensurePlatforms();
+      ensureHazards();
+    }
     updateHud();
   }
 
@@ -4285,9 +4646,8 @@
     keys.add(e.key);
     if (e.key === " " || e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
       e.preventDefault();
-      if (state === "menu") startGame(lastGameMode);
-      else if (state === "over") startGame(lastGameMode);
-      else jump();
+      if (state === "over") startGame(lastGameMode);
+      else if (state === "playing") jump();
     }
     if (e.key === "m" || e.key === "M") {
       toggleMusic();
@@ -4339,13 +4699,12 @@
   }
 
   canvas.addEventListener("mousedown", () => {
-    if (state === "menu") startGame(lastGameMode);
-    else if (state === "over") startGame(lastGameMode);
-    else if (!useMobileControls()) jump();
+    if (state === "over") startGame(lastGameMode);
+    else if (state === "playing" && !useMobileControls()) jump();
   });
 
   canvas.addEventListener("touchstart", (e) => {
-    if (state === "menu" || state === "over") {
+    if (state === "over") {
       e.preventDefault();
       startGame(lastGameMode);
       return;
@@ -4397,7 +4756,7 @@
     playerNameInput.addEventListener("keydown", function (e) {
       if (e.key === "Enter") {
         e.preventDefault();
-        startGame(lastGameMode);
+        commitPlayerNameFromOverlay();
       }
     });
   }

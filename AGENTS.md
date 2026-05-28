@@ -102,7 +102,7 @@ forest 790 → sky 10 → space 200 → alien 780 → sky 10 → space 200 → f
 
 ### Режимы игры
 - **Аркада** (`gameMode = "arcade"`) — бесконечный подъём, как раньше; результат в таблицу рекордов.
-- **Уровни** (`gameMode = "levels"`) — цель по высоте: `35 + (уровень - 1) * 40`. Пройденный уровень → +50 сена, баннер, следующий уровень в той же партии. Прогресс: `localStorage["chinchilla-level-progress"]` (открытый уровень). Кнопки `#start-levels-btn` / `#start-arcade-btn`.
+- **Уровни** (`gameMode = "levels"`) — фиксированные уровни с **порталом** в конце. Добравшись до портала → +50 сена, баннер, следующий уровень. Чередуются **вертикальные** (↑ прыжки вверх) и **горизонтальные** (→ бег/прыжки вправо, камера `cameraX`). Определения в `LEVEL_DEFS`, сборка — `buildVerticalLevel()` / `buildHorizontalLevel()`. Прогресс: `localStorage["chinchilla-level-progress"]`. Кнопки `#start-levels-btn` / `#start-arcade-btn`. В режиме уровней нет бесконечного спавна платформ и врагов (`ensurePlatforms` / `ensureHazards` отключены).
 
 ### Музыка
 - Web Audio: pads (triangle) + бас + хэт + снейр + кик + лид. Прогрессия из 4 аккордов.
