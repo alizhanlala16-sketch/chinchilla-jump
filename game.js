@@ -1025,6 +1025,10 @@
     catch (e) { return ""; }
   }
 
+  function getPlayerNameInputEl() {
+    return document.getElementById("player-name-input");
+  }
+
   function setPlayerNameValue(name) {
     const cleaned = String(name || "").trim().slice(0, 16);
     if (cleaned) {
@@ -1035,8 +1039,33 @@
   }
 
   function refreshPlayerNameDisplay() {
-    const el = document.getElementById("player-name-display");
-    if (el) el.textContent = getPlayerName() || "—";
+    const name = getPlayerName();
+    const overlayInp = getPlayerNameInputEl();
+    const modalInp = document.getElementById("name-input");
+    if (overlayInp && document.activeElement !== overlayInp) overlayInp.value = name;
+    if (modalInp && document.activeElement !== modalInp) modalInp.value = name;
+  }
+
+  function commitPlayerNameFromOverlay() {
+    const inp = getPlayerNameInputEl();
+    const hint = document.getElementById("player-name-hint");
+    if (!inp) return getPlayerName();
+    const name = setPlayerNameValue(inp.value);
+    if (name) {
+      inp.classList.remove("name-required");
+      if (hint) hint.classList.add("hidden");
+    }
+    return name;
+  }
+
+  function promptPlayerNameRequired() {
+    const inp = getPlayerNameInputEl();
+    const hint = document.getElementById("player-name-hint");
+    if (inp) {
+      inp.classList.add("name-required");
+      try { inp.focus(); } catch (e) {}
+    }
+    if (hint) hint.classList.remove("hidden");
   }
 
   function getLeaderboard() {
@@ -1363,10 +1392,9 @@
   }
 
   function startGame() {
-    if (!getPlayerName()) {
-      showNamePrompt(function (savedName) {
-        if (savedName) actuallyStartGame();
-      });
+    const name = commitPlayerNameFromOverlay();
+    if (!name) {
+      promptPlayerNameRequired();
       return;
     }
     actuallyStartGame();
@@ -4017,11 +4045,36 @@
   if (lbClose) lbClose.addEventListener("click", hideLeaderboard);
   if (lbRename) lbRename.addEventListener("click", function () {
     hideLeaderboard();
+    const overlayInp = getPlayerNameInputEl();
+    if (overlayInp && overlay && !overlay.classList.contains("hidden")) {
+      try { overlayInp.focus(); overlayInp.select(); } catch (e) {}
+      return;
+    }
     showNamePrompt(function () { showLeaderboard(); });
   });
   document.getElementById("leaderboard").addEventListener("click", function (e) {
     if (e.target.id === "leaderboard") hideLeaderboard();
   });
+
+  const playerNameInput = getPlayerNameInputEl();
+  if (playerNameInput) {
+    playerNameInput.addEventListener("input", function () {
+      if (playerNameInput.value.trim()) {
+        playerNameInput.classList.remove("name-required");
+        const hint = document.getElementById("player-name-hint");
+        if (hint) hint.classList.add("hidden");
+      }
+    });
+    playerNameInput.addEventListener("blur", function () {
+      if (playerNameInput.value.trim()) commitPlayerNameFromOverlay();
+    });
+    playerNameInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        startGame();
+      }
+    });
+  }
   refreshPlayerNameDisplay();
 
   resetGame();

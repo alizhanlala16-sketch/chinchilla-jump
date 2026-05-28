@@ -97,7 +97,7 @@ forest 790 → sky 10 → space 200 → alien 780 → sky 10 → space 200 → f
 
 ### Рекорд и таблица рекордов
 - **Best score** (общий рекорд в HUD) — `localStorage["chinchilla-best"]` (просто число).
-- **Имя игрока** — `localStorage["chinchilla-player-name"]` (до 16 символов). Спрашивается через модальное окно `#name-prompt` при первом нажатии «Играть».
+- **Имя игрока** — `localStorage["chinchilla-player-name"]` (до 16 символов). Поле `#player-name-input` на стартовом экране `#overlay`; сохраняется при blur и перед стартом игры. Модал `#name-prompt` — только для «Сменить имя» с экрана проигрыша (когда меню скрыто).
 - **Таблица рекордов** — `localStorage["chinchilla-leaderboard"]` (JSON), топ-10 объектов вида `{ name, score, height, date }`. Сортировка: `score desc → height desc → date asc`. Рендерится в модал `#leaderboard` через `renderLeaderboard()` с HTML-эскейпом имён (`escapeHtml`).
 - **Кнопки «🏆 Рекорды»** есть в стартовом меню и на экране проигрыша. Внутри таблицы — «Закрыть» и «Сменить имя».
 - На экране проигрыша показывается строка «Место в таблице: N из M».

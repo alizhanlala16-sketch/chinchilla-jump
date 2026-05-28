@@ -37,7 +37,11 @@
         <p>Бонусы: <strong>ракета</strong> — 6 с, <strong>щит</strong> — 19 с, <strong>лазеры из ушей</strong> — 15 с уничтожения врагов</p>
         <p><kbd>M</kbd> — музыка вкл/выкл</p>
       </div>
-      <p class="player-name-line">Игрок: <span id="player-name-display">—</span></p>
+      <div class="player-name-field">
+        <label for="player-name-input">Твоё имя</label>
+        <input id="player-name-input" type="text" maxlength="16" autocomplete="nickname" spellcheck="false" placeholder="Например, Айлана">
+        <p id="player-name-hint" class="player-name-hint hidden">Введи имя, чтобы попасть в таблицу рекордов</p>
+      </div>
       <div class="btn-row">
         <button id="start-btn">Играть</button>
         <button id="leaderboard-btn" class="btn-secondary" type="button">🏆 Рекорды</button>
