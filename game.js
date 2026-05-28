@@ -164,7 +164,7 @@
   const keys = new Set();
   let state = "menu";
   let gameMode = "arcade";
-  let lastGameMode = "arcade";
+  let lastGameMode = "levels";
   let currentLevel = 1;
   let levelProgress = 1;
   let levelOrient = "vertical";
@@ -172,18 +172,21 @@
   let worldWidth = W;
   let portal = null;
   let levelTransitionTimer = 0;
+  let levelCameraLocked = false;
   const PORTAL_SUCK_DURATION = 90;
+  const HUD_SAFE_TOP = 96;
+  const HUD_SAFE_BOTTOM = 40;
   let portalSuckFrom = { x: 0, y: 0 };
   let levelBannerTimer = 0;
   let levelBannerText = "";
   const LEVEL_PROGRESS_KEY = "chinchilla-level-progress";
   const LEVEL_DEFS = [
-    { orient: "vertical", label: "Лес вверх" },
     { orient: "horizontal", label: "Ветка вправо" },
-    { orient: "vertical", label: "К облакам" },
+    { orient: "vertical", label: "Лес вверх" },
     { orient: "horizontal", label: "Через лес" },
-    { orient: "vertical", label: "К вершине" },
+    { orient: "vertical", label: "К облакам" },
     { orient: "horizontal", label: "Дальняя ветка" },
+    { orient: "vertical", label: "К вершине" },
   ];
   let cameraY = 0;
   let score = 0;
@@ -232,6 +235,29 @@
     };
   }
 
+  function fitLevelCamera(def) {
+    levelCameraLocked = false;
+    if (!portal) return;
+    const playTop = HUD_SAFE_TOP;
+    const playBottom = H - HUD_SAFE_BOTTOM;
+    const playH = playBottom - playTop;
+    if (def.orient === "vertical") {
+      const topY = portal.y - portal.r * 2;
+      const bottomY = player.y + player.h + 12;
+      const span = bottomY - topY;
+      if (span <= playH) {
+        levelCameraLocked = true;
+        cameraY = topY - playTop;
+      } else {
+        cameraY = player.y - (playBottom - 120);
+      }
+      cameraX = 0;
+      return;
+    }
+    cameraY = Math.max(0, player.y - CAMERA_FOLLOW + 10);
+    cameraX = 0;
+  }
+
   function buildVerticalLevel(levelNum) {
     levelOrient = "vertical";
     cameraX = 0;
@@ -261,9 +287,9 @@
 
   function buildHorizontalLevel(levelNum) {
     levelOrient = "horizontal";
-    const steps = 5 + Math.min(Math.floor((levelNum - 1) / 2), 5);
+    const steps = 4 + Math.min(Math.floor((levelNum - 1) / 2), 4);
     const groundY = H - 110;
-    worldWidth = 200 + steps * 98 + 140;
+    worldWidth = 160 + steps * 88 + 110;
     cameraX = 0;
     cameraY = Math.max(0, groundY - CAMERA_FOLLOW + 10);
     platforms.push(makePlatform(8, groundY, 118, "grass"));
@@ -307,6 +333,7 @@
     const def = getLevelDef(levelNum);
     if (def.orient === "horizontal") buildHorizontalLevel(levelNum);
     else buildVerticalLevel(levelNum);
+    fitLevelCamera(def);
     levelBannerText = "Уровень " + levelNum + " · " + (def.orient === "horizontal" ? "беги вправо к порталу →" : "прыгай вверх к порталу ↑");
     levelBannerTimer = 130;
     updateModeHud();
@@ -484,8 +511,8 @@
     if (levelTransitionTimer > 0) return;
     const px = portal.x - cameraX;
     const py = portal.y - cameraY;
-    const margin = 44;
-    const onScreen = px > margin && px < W - margin && py > margin && py < H - margin;
+    const margin = HUD_SAFE_TOP + 8;
+    const onScreen = px > margin && px < W - margin && py > margin && py < H - HUD_SAFE_BOTTOM;
     ctx.save();
     if (onScreen) {
       const bob = Math.sin((portal.pulse || 0) * 1.4) * 4;
@@ -499,9 +526,9 @@
       ctx.strokeText(label, px, py - portal.r - 10 + bob);
       ctx.fillText(label, px, py - portal.r - 10 + bob);
     } else {
-      const cx = clamp(px, margin, W - margin);
-      const cy = clamp(py, margin, H - margin);
-      const angle = Math.atan2(py - H * 0.42, px - W * 0.5);
+      const cx = clamp(px, margin + 18, W - margin - 18);
+      const cy = clamp(py, margin + 18, H - HUD_SAFE_BOTTOM - 18);
+      const angle = Math.atan2(py - H * 0.46, px - W * 0.5);
       ctx.translate(cx, cy);
       ctx.rotate(angle);
       ctx.fillStyle = "rgba(200,150,255,0.92)";
@@ -520,6 +547,44 @@
       ctx.textBaseline = "middle";
       ctx.fillText("Портал", 0, -22);
     }
+    ctx.restore();
+  }
+
+  function drawLevelPortalMarker() {
+    if (gameMode !== "levels" || state !== "playing" || !portal || !portal.active) return;
+    if (levelTransitionTimer > 0) return;
+    const px = portal.x - cameraX;
+    const py = portal.y - cameraY;
+    const barY = H - 24;
+    const cx = W * 0.5;
+    const angle = Math.atan2(py - barY, px - cx);
+    const dist = Math.hypot(px - cx, py - barY);
+    ctx.save();
+    ctx.fillStyle = "rgba(12, 8, 28, 0.72)";
+    ctx.strokeStyle = "rgba(200,150,255,0.85)";
+    ctx.lineWidth = 2;
+    roundRect(10, barY - 16, W - 20, 32, 12);
+    ctx.fill();
+    ctx.stroke();
+    ctx.translate(cx, barY);
+    ctx.rotate(angle);
+    ctx.fillStyle = "#d8b4ff";
+    ctx.beginPath();
+    ctx.moveTo(16, 0);
+    ctx.lineTo(-8, -10);
+    ctx.lineTo(-8, 10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    ctx.save();
+    ctx.fillStyle = "#f4e8ff";
+    ctx.font = "bold 12px Segoe UI, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const hint = levelOrient === "horizontal"
+      ? "→ беги к фиолетовому порталу"
+      : (dist < 140 ? "↑ прыгай в портал" : "↑ поднимайся к порталу");
+    ctx.fillText(hint, cx, barY);
     ctx.restore();
   }
 
@@ -1431,7 +1496,11 @@
       const targetCameraX = player.x - W * 0.38;
       cameraX = clamp(targetCameraX, 0, Math.max(0, worldWidth - W));
       cameraY = Math.max(0, (H - 110) - CAMERA_FOLLOW + 10);
-    } else {
+    } else if (gameMode === "levels" && levelOrient === "vertical" && !levelCameraLocked) {
+      cameraX = 0;
+      const targetCameraY = player.y - (H - HUD_SAFE_BOTTOM - 120);
+      if (targetCameraY < cameraY) cameraY = targetCameraY;
+    } else if (gameMode !== "levels") {
       cameraX = 0;
       const targetCameraY = player.y - CAMERA_FOLLOW;
       if (targetCameraY < cameraY) cameraY = targetCameraY;
@@ -2053,6 +2122,8 @@
   function startGame(mode) {
     if (mode !== "levels" && mode !== "arcade") return;
     lastGameMode = mode;
+    if (startLevelsBtn) startLevelsBtn.classList.toggle("mode-selected", mode === "levels");
+    if (startArcadeBtn) startArcadeBtn.classList.toggle("mode-selected", mode === "arcade");
     const name = commitPlayerNameFromOverlay();
     if (!name) {
       promptPlayerNameRequired();
@@ -4592,6 +4663,7 @@
     drawLaserBeams();
     ctx.restore();
     drawPortalGuide();
+    drawLevelPortalMarker();
     drawDoubleJumpIndicator();
     drawLives();
     drawPowerupTimers();
@@ -4716,7 +4788,11 @@
   const startArcadeBtn = document.getElementById("start-arcade-btn");
   const restartLevelsBtn = document.getElementById("restart-levels-btn");
   const restartArcadeBtn = document.getElementById("restart-arcade-btn");
-  if (startLevelsBtn) startLevelsBtn.addEventListener("click", function () { startGame("levels"); });
+  if (startLevelsBtn) {
+    startLevelsBtn.addEventListener("click", function () { startGame("levels"); });
+    startLevelsBtn.classList.add("mode-selected");
+    lastGameMode = "levels";
+  }
   if (startArcadeBtn) startArcadeBtn.addEventListener("click", function () { startGame("arcade"); });
   if (restartLevelsBtn) restartLevelsBtn.addEventListener("click", function () { startGame("levels"); });
   if (restartArcadeBtn) restartArcadeBtn.addEventListener("click", function () { startGame("arcade"); });

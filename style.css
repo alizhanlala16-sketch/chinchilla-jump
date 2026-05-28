@@ -534,6 +534,11 @@ button:hover {
   max-width: 320px;
 }
 
+.play-modes button.mode-selected {
+  box-shadow: 0 0 0 2px rgba(200, 150, 255, 0.95), 0 8px 20px rgba(120, 60, 200, 0.35);
+  background: linear-gradient(180deg, #9b6bd4 0%, #6b3fa8 100%);
+}
+
 .play-modes {
   width: 100%;
 }
