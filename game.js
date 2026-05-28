@@ -360,7 +360,7 @@
       });
     }
 
-    if (type !== "fragile" && Math.random() < 0.005) {
+    if (type !== "fragile" && Math.random() < 0.004) {
       rockets.push({
         platform,
         offsetX: rand(-platform.w * 0.15, platform.w * 0.15),
