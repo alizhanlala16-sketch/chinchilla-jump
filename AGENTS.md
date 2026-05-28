@@ -90,15 +90,15 @@ forest 790 → sky 10 → space 200 → alien 780 → sky 10 → space 200 → f
 ```
 Между темами — мягкий fade. Функция `getThemeBlend(h)` возвращает текущее смешение `{a, b, t}`.
 
-### Управление
-- **ПК:** ←/→ или A/D — движение; Space / ↑ / W — прыжок; M — музыка вкл/выкл; клик мышью — прыжок.
-- **Мобайл:** определяется через `(hover: none) and (pointer: coarse)`. Кнопки `#ctrl-jump` (слева), `#ctrl-left`/`#ctrl-right` (справа). На десктопе мобильные кнопки скрыты CSS.
-
 ### Скины и шляпы
 - Выбор на стартовом экране `#overlay`: блок `.cosmetics-panel`.
 - **Скины** (`CHIN_SKINS`, localStorage `chinchilla-skin`): `standard` (серая), `white` (белая), `black` (чёрная). Палитра через `getSkinPalette()` в `drawChinchilla()`.
 - **Шляпы** (`CHIN_HATS`, localStorage `chinchilla-hat`): `none`, `gentleman` (цилиндр с красной лентой, `drawGentlemanHat()`).
 - Функции: `setSelectedSkin`, `setSelectedHat`, `updateCosmeticUi`, `bindCosmeticButtons`.
+
+### Режимы игры
+- **Аркада** (`gameMode = "arcade"`) — бесконечный подъём, как раньше; результат в таблицу рекордов.
+- **Уровни** (`gameMode = "levels"`) — цель по высоте: `35 + (уровень - 1) * 40`. Пройденный уровень → +50 сена, баннер, следующий уровень в той же партии. Прогресс: `localStorage["chinchilla-level-progress"]` (открытый уровень). Кнопки `#start-levels-btn` / `#start-arcade-btn`.
 
 ### Музыка
 - Web Audio: pads (triangle) + бас + хэт + снейр + кик + лид. Прогрессия из 4 аккордов.

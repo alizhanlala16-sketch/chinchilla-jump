@@ -24,6 +24,14 @@
         <span class="label">Рекорд</span>
         <span id="best">0</span>
       </div>
+      <div class="hud-item hud-mode-level hidden" id="hud-level-item">
+        <span class="label">Уровень</span>
+        <span id="level-num">1</span>
+      </div>
+      <div class="hud-item hud-mode-level hidden" id="hud-goal-item">
+        <span class="label">Цель</span>
+        <span id="level-goal">0</span>
+      </div>
     </div>
     <div id="overlay" class="visible">
       <div class="overlay-inner">
@@ -64,18 +72,27 @@
           </div>
         </div>
       </div>
-      <div class="overlay-actions btn-row">
-        <button id="start-btn">Играть</button>
-        <button id="leaderboard-btn" class="btn-secondary" type="button">🏆 Рекорды</button>
+      <div class="overlay-actions">
+        <div class="btn-row play-modes">
+          <button id="start-levels-btn" type="button">Уровни</button>
+          <button id="start-arcade-btn" type="button">Аркада</button>
+        </div>
+        <div class="btn-row">
+          <button id="leaderboard-btn" class="btn-secondary" type="button">🏆 Рекорды</button>
+        </div>
       </div>
     </div>
     <div id="gameover" class="hidden">
-      <h2>Упала!</h2>
+      <h2 id="gameover-title">Упала!</h2>
+      <p id="final-mode-line" class="final-mode hidden"></p>
       <p>Сено: <span id="final-score">0</span></p>
       <p>Высота: <span id="final-height">0</span></p>
       <p id="final-rank-line" class="final-rank hidden"></p>
+      <div class="btn-row play-modes">
+        <button id="restart-levels-btn" type="button">Уровни</button>
+        <button id="restart-arcade-btn" type="button">Аркада</button>
+      </div>
       <div class="btn-row">
-        <button id="restart-btn">Ещё раз</button>
         <button id="leaderboard-btn-2" class="btn-secondary" type="button">🏆 Рекорды</button>
       </div>
     </div>

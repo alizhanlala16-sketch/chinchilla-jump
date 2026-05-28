@@ -13,6 +13,12 @@
   const bestEl = document.getElementById("best");
   const finalScoreEl = document.getElementById("final-score");
   const finalHeightEl = document.getElementById("final-height");
+  const gameoverTitleEl = document.getElementById("gameover-title");
+  const finalModeLineEl = document.getElementById("final-mode-line");
+  const levelNumEl = document.getElementById("level-num");
+  const levelGoalEl = document.getElementById("level-goal");
+  const hudLevelItem = document.getElementById("hud-level-item");
+  const hudGoalItem = document.getElementById("hud-goal-item");
 
   const GRAVITY = 0.55;
   const JUMP_FORCE = -11.8;
@@ -157,6 +163,14 @@
 
   const keys = new Set();
   let state = "menu";
+  let gameMode = "arcade";
+  let lastGameMode = "arcade";
+  let currentLevel = 1;
+  let levelProgress = 1;
+  let levelClearedUpTo = 0;
+  let levelBannerTimer = 0;
+  let levelBannerText = "";
+  const LEVEL_PROGRESS_KEY = "chinchilla-level-progress";
   let cameraY = 0;
   let score = 0;
   let bestScore = Number(localStorage.getItem("chinchilla-best") || 0);
@@ -165,6 +179,72 @@
   let backgroundLeaves = [];
 
   bestEl.textContent = bestScore;
+  levelProgress = loadLevelProgress();
+
+  function loadLevelProgress() {
+    try {
+      const n = parseInt(localStorage.getItem(LEVEL_PROGRESS_KEY) || "1", 10);
+      return Math.max(1, Math.min(n, 999));
+    } catch (e) { return 1; }
+  }
+
+  function saveLevelProgress(lv) {
+    levelProgress = Math.max(levelProgress, lv);
+    try { localStorage.setItem(LEVEL_PROGRESS_KEY, String(levelProgress)); } catch (e) {}
+  }
+
+  function getLevelTarget(lv) {
+    return 35 + (lv - 1) * 40;
+  }
+
+  function updateModeHud() {
+    const isLevels = gameMode === "levels" && state === "playing";
+    if (hudLevelItem) hudLevelItem.classList.toggle("hidden", !isLevels);
+    if (hudGoalItem) hudGoalItem.classList.toggle("hidden", !isLevels);
+    if (isLevels) {
+      if (levelNumEl) levelNumEl.textContent = currentLevel;
+      if (levelGoalEl) levelGoalEl.textContent = getLevelTarget(currentLevel);
+    }
+  }
+
+  function completeLevel() {
+    const cleared = currentLevel;
+    saveLevelProgress(cleared + 1);
+    currentLevel = cleared + 1;
+    levelClearedUpTo = cleared;
+    levelBannerTimer = 150;
+    levelBannerText = "Уровень " + cleared + " пройден!";
+    score += 50;
+    spawnSparkles(player.x, player.y);
+    playSnort(1.25, 0.28);
+    updateHud();
+    updateModeHud();
+  }
+
+  function checkLevelComplete() {
+    if (gameMode !== "levels" || state !== "playing") return;
+    if (currentLevel <= levelClearedUpTo) return;
+    if (maxHeight >= getLevelTarget(currentLevel)) completeLevel();
+  }
+
+  function drawLevelBanner() {
+    if (levelBannerTimer <= 0) return;
+    levelBannerTimer -= 1;
+    const alpha = Math.min(1, levelBannerTimer / 40);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "rgba(8, 10, 24, 0.55)";
+    ctx.fillRect(W * 0.12, H * 0.38, W * 0.76, 52);
+    ctx.strokeStyle = "rgba(255, 224, 138, 0.7)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(W * 0.12, H * 0.38, W * 0.76, 52);
+    ctx.fillStyle = "#ffe08a";
+    ctx.font = "bold 22px Segoe UI, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(levelBannerText, W / 2, H * 0.38 + 26);
+    ctx.restore();
+  }
 
   const player = {
     x: W / 2,
@@ -392,7 +472,15 @@
       spawnPlatform(highestPlatformY - PLATFORM_GAP);
     }
 
+    levelBannerTimer = 0;
+    levelBannerText = "";
+    levelClearedUpTo = 0;
+    if (gameMode === "levels") {
+      currentLevel = levelProgress;
+    }
+
     updateHud();
+    updateModeHud();
   }
 
   function pickPlatformType(heightLevel) {
@@ -1020,6 +1108,7 @@
 
     const currentHeight = Math.max(0, Math.floor((INITIAL_Y - player.y) / 10));
     maxHeight = Math.max(maxHeight, currentHeight);
+    checkLevelComplete();
 
     if (player.y - cameraY > H + 60) {
       if (player.shieldTimer > 0) {
@@ -1101,13 +1190,29 @@
     finalScoreEl.textContent = score;
     finalHeightEl.textContent = maxHeight;
 
-    const playerName = getPlayerName() || "Аноним";
+    const rankLine = document.getElementById("final-rank-line");
+    if (gameMode === "levels") {
+      if (gameoverTitleEl) gameoverTitleEl.textContent = "Не вышло!";
+      if (finalModeLineEl) {
+        finalModeLineEl.textContent = "Уровни · уровень " + currentLevel + " (цель: " + getLevelTarget(currentLevel) + ")";
+        finalModeLineEl.classList.remove("hidden");
+      }
+      if (rankLine) rankLine.classList.add("hidden");
+    } else {
+      if (gameoverTitleEl) gameoverTitleEl.textContent = "Упала!";
+      if (finalModeLineEl) finalModeLineEl.classList.add("hidden");
+    }
+
     gameoverEl.classList.remove("hidden");
     gameoverEl.classList.add("visible");
 
-    saveScoreAsync(playerName, score, maxHeight).then(function (updatedBoard) {
-      updateFinalRankLine(updatedBoard, playerName, score, maxHeight);
-    });
+    if (gameMode === "arcade") {
+      const playerName = getPlayerName() || "Аноним";
+      saveScoreAsync(playerName, score, maxHeight).then(function (updatedBoard) {
+        updateFinalRankLine(updatedBoard, playerName, score, maxHeight);
+      });
+    }
+    updateModeHud();
   }
 
   const LEADERBOARD_KEY = "chinchilla-leaderboard";
@@ -1599,16 +1704,18 @@
     if (mc) mc.setAttribute("aria-hidden", playing ? "false" : "true");
   }
 
-  function startGame() {
+  function startGame(mode) {
+    if (mode === "levels" || mode === "arcade") lastGameMode = mode;
     const name = commitPlayerNameFromOverlay();
     if (!name) {
       promptPlayerNameRequired();
       return;
     }
-    actuallyStartGame();
+    actuallyStartGame(lastGameMode);
   }
 
-  function actuallyStartGame() {
+  function actuallyStartGame(mode) {
+    gameMode = mode === "levels" ? "levels" : "arcade";
     resetGame();
     state = "playing";
     overlay.classList.remove("visible");
@@ -1617,6 +1724,7 @@
     gameoverEl.classList.add("hidden");
     setPlayingUi(true);
     startMusic();
+    updateModeHud();
   }
 
   function drawBackground() {
@@ -4130,6 +4238,7 @@
     drawDoubleJumpIndicator();
     drawLives();
     drawPowerupTimers();
+    drawLevelBanner();
   }
 
   function update() {
@@ -4176,8 +4285,8 @@
     keys.add(e.key);
     if (e.key === " " || e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
       e.preventDefault();
-      if (state === "menu") startGame();
-      else if (state === "over") startGame();
+      if (state === "menu") startGame(lastGameMode);
+      else if (state === "over") startGame(lastGameMode);
       else jump();
     }
     if (e.key === "m" || e.key === "M") {
@@ -4230,22 +4339,28 @@
   }
 
   canvas.addEventListener("mousedown", () => {
-    if (state === "menu") startGame();
-    else if (state === "over") startGame();
+    if (state === "menu") startGame(lastGameMode);
+    else if (state === "over") startGame(lastGameMode);
     else if (!useMobileControls()) jump();
   });
 
   canvas.addEventListener("touchstart", (e) => {
     if (state === "menu" || state === "over") {
       e.preventDefault();
-      startGame();
+      startGame(lastGameMode);
       return;
     }
     if (useMobileControls()) e.preventDefault();
   }, { passive: false });
 
-  document.getElementById("start-btn").addEventListener("click", startGame);
-  document.getElementById("restart-btn").addEventListener("click", startGame);
+  const startLevelsBtn = document.getElementById("start-levels-btn");
+  const startArcadeBtn = document.getElementById("start-arcade-btn");
+  const restartLevelsBtn = document.getElementById("restart-levels-btn");
+  const restartArcadeBtn = document.getElementById("restart-arcade-btn");
+  if (startLevelsBtn) startLevelsBtn.addEventListener("click", function () { startGame("levels"); });
+  if (startArcadeBtn) startArcadeBtn.addEventListener("click", function () { startGame("arcade"); });
+  if (restartLevelsBtn) restartLevelsBtn.addEventListener("click", function () { startGame("levels"); });
+  if (restartArcadeBtn) restartArcadeBtn.addEventListener("click", function () { startGame("arcade"); });
 
   const lbBtn = document.getElementById("leaderboard-btn");
   const lbBtn2 = document.getElementById("leaderboard-btn-2");
@@ -4282,7 +4397,7 @@
     playerNameInput.addEventListener("keydown", function (e) {
       if (e.key === "Enter") {
         e.preventDefault();
-        startGame();
+        startGame(lastGameMode);
       }
     });
   }
