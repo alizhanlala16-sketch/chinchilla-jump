@@ -360,7 +360,7 @@
       });
     }
 
-    if (type !== "fragile" && Math.random() < 0.012) {
+    if (type !== "fragile" && Math.random() < 0.005) {
       rockets.push({
         platform,
         offsetX: rand(-platform.w * 0.15, platform.w * 0.15),
@@ -371,7 +371,7 @@
       });
     }
 
-    if (type !== "fragile" && Math.random() < 0.012) {
+    if (type !== "fragile" && Math.random() < 0.005) {
       shields.push({
         platform,
         offsetX: rand(-platform.w * 0.15, platform.w * 0.15),
@@ -382,7 +382,7 @@
       });
     }
 
-    if (type !== "fragile" && Math.random() < 0.010) {
+    if (type !== "fragile" && Math.random() < 0.004) {
       lasers.push({
         platform,
         offsetX: rand(-platform.w * 0.15, platform.w * 0.15),
