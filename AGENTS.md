@@ -94,6 +94,12 @@ forest 790 → sky 10 → space 200 → alien 780 → sky 10 → space 200 → f
 - **ПК:** ←/→ или A/D — движение; Space / ↑ / W — прыжок; M — музыка вкл/выкл; клик мышью — прыжок.
 - **Мобайл:** определяется через `(hover: none) and (pointer: coarse)`. Кнопки `#ctrl-jump` (слева), `#ctrl-left`/`#ctrl-right` (справа). На десктопе мобильные кнопки скрыты CSS.
 
+### Скины и шляпы
+- Выбор на стартовом экране `#overlay`: блок `.cosmetics-panel`.
+- **Скины** (`CHIN_SKINS`, localStorage `chinchilla-skin`): `standard` (серая), `white` (белая), `black` (чёрная). Палитра через `getSkinPalette()` в `drawChinchilla()`.
+- **Шляпы** (`CHIN_HATS`, localStorage `chinchilla-hat`): `none`, `gentleman` (цилиндр с красной лентой, `drawGentlemanHat()`).
+- Функции: `setSelectedSkin`, `setSelectedHat`, `updateCosmeticUi`, `bindCosmeticButtons`.
+
 ### Музыка
 - Web Audio: pads (triangle) + бас + хэт + снейр + кик + лид. Прогрессия из 4 аккордов.
 - Громкость `MUSIC_VOLUME = 0.045`. Запуск — по первому клику/нажатию/тапу.

@@ -148,6 +148,15 @@ body.game-page {
     max-width: 100%;
     margin-bottom: 10px;
   }
+  #overlay .cosmetics-panel {
+    max-width: 100%;
+    margin-bottom: 10px;
+    gap: 8px;
+  }
+  #overlay .cosmetic-btn {
+    padding: 6px 10px !important;
+    font-size: 11px !important;
+  }
   #overlay .btn-row button {
     padding: 11px 20px;
     font-size: 15px;
@@ -356,6 +365,58 @@ button:hover {
   font-size: 12px;
   color: #ff9a8a;
   line-height: 1.35;
+}
+
+.cosmetics-panel {
+  width: 100%;
+  max-width: 320px;
+  margin: 0 0 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cosmetic-group {
+  text-align: left;
+}
+
+.cosmetic-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 224, 138, 0.85);
+  letter-spacing: 0.04em;
+}
+
+.cosmetic-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cosmetic-btn {
+  padding: 7px 12px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.07) !important;
+  color: var(--text) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
+}
+
+.cosmetic-btn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  transform: translateY(-1px);
+}
+
+.cosmetic-btn.active {
+  background: rgba(255, 179, 71, 0.22) !important;
+  border-color: rgba(255, 200, 120, 0.55) !important;
+  color: #ffe08a !important;
 }
 
 .final-rank {

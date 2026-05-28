@@ -33,6 +33,111 @@
   const LASER_LENGTH = 1600;
   const LASER_HALF_WIDTH = 6;
 
+  const SKIN_KEY = "chinchilla-skin";
+  const HAT_KEY = "chinchilla-hat";
+
+  const CHIN_SKINS = {
+    standard: {
+      tailDark: "#7d756c", tailMid: "#9c948c", tailTuft: "#c0b6ad", tailTip: "#e4dacf", tailShadow: "rgba(80,70,60,0.35)",
+      bodyDark: "#857d75", bodyTuft: "#a89e96", bodyMid: "#b8aea6", belly: "#efe8e2",
+      legOuter: "#a89e96", legInner: "#c0b6ad",
+      earL1: "#857d75", earL2: "#a89e96", earL3: "#c69088",
+      earR1: "#a89e96", earR2: "#c0b6ad", earR3: "#f0bcb2", earRInner: "rgba(160,90,80,0.55)",
+      headDark: "#9a928a", headMid: "#b8aea6", headLight: "#cfc6be",
+      cheekOuter: "#a89e96", cheekInner: "#c0b6ad", muzzle: "#ece4dc",
+      whisker: "rgba(40,35,30,0.8)", blush: "rgba(230,150,150,0.5)",
+    },
+    white: {
+      tailDark: "#d0ccc8", tailMid: "#e2deda", tailTuft: "#eeeae6", tailTip: "#faf8f6", tailShadow: "rgba(120,110,100,0.22)",
+      bodyDark: "#d8d4d0", bodyTuft: "#e6e2de", bodyMid: "#f0ece8", belly: "#faf8f6",
+      legOuter: "#e0dcd8", legInner: "#ece8e4",
+      earL1: "#d4d0cc", earL2: "#e4e0dc", earL3: "#f0d8d4",
+      earR1: "#e0dcd8", earR2: "#ece8e4", earR3: "#f8e8e4", earRInner: "rgba(200,140,130,0.45)",
+      headDark: "#dcd8d4", headMid: "#eae6e2", headLight: "#f4f0ec",
+      cheekOuter: "#e0dcd8", cheekInner: "#ece8e4", muzzle: "#f8f4f0",
+      whisker: "rgba(80,70,60,0.55)", blush: "rgba(240,170,170,0.45)",
+    },
+    black: {
+      tailDark: "#181614", tailMid: "#262422", tailTuft: "#343230", tailTip: "#444240", tailShadow: "rgba(0,0,0,0.45)",
+      bodyDark: "#1e1c1a", bodyTuft: "#2c2a28", bodyMid: "#3a3836", belly: "#4a4846",
+      legOuter: "#2c2a28", legInner: "#3a3836",
+      earL1: "#222018", earL2: "#323030", earL3: "#5a4040",
+      earR1: "#2a2826", earR2: "#383634", earR3: "#6a5048", earRInner: "rgba(90,50,45,0.55)",
+      headDark: "#242220", headMid: "#323030", headLight: "#424038",
+      cheekOuter: "#2c2a28", cheekInner: "#3a3836", muzzle: "#504e4c",
+      whisker: "rgba(200,190,180,0.35)", blush: "rgba(180,90,90,0.35)",
+    },
+  };
+
+  const CHIN_HATS = { none: "none", gentleman: "gentleman" };
+
+  function loadCosmetic(key, allowed, fallback) {
+    try {
+      const v = localStorage.getItem(key);
+      if (v && allowed[v]) return v;
+    } catch (e) {}
+    return fallback;
+  }
+
+  let selectedSkin = loadCosmetic(SKIN_KEY, CHIN_SKINS, "standard");
+  let selectedHat = loadCosmetic(HAT_KEY, CHIN_HATS, "none");
+
+  function getSkinPalette() {
+    return CHIN_SKINS[selectedSkin] || CHIN_SKINS.standard;
+  }
+
+  function setSelectedSkin(id) {
+    if (!CHIN_SKINS[id]) return;
+    selectedSkin = id;
+    try { localStorage.setItem(SKIN_KEY, id); } catch (e) {}
+    updateCosmeticUi();
+  }
+
+  function setSelectedHat(id) {
+    if (!CHIN_HATS[id]) return;
+    selectedHat = id;
+    try { localStorage.setItem(HAT_KEY, id); } catch (e) {}
+    updateCosmeticUi();
+  }
+
+  function updateCosmeticUi() {
+    document.querySelectorAll("#skin-options .cosmetic-btn").forEach(function (btn) {
+      btn.classList.toggle("active", btn.dataset.skin === selectedSkin);
+    });
+    document.querySelectorAll("#hat-options .cosmetic-btn").forEach(function (btn) {
+      btn.classList.toggle("active", btn.dataset.hat === selectedHat);
+    });
+  }
+
+  function bindCosmeticButtons() {
+    document.querySelectorAll("#skin-options .cosmetic-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () { setSelectedSkin(btn.dataset.skin); });
+    });
+    document.querySelectorAll("#hat-options .cosmetic-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () { setSelectedHat(btn.dataset.hat); });
+    });
+    updateCosmeticUi();
+  }
+
+  function drawGentlemanHat() {
+    ctx.save();
+    ctx.fillStyle = "#141414";
+    ctx.beginPath();
+    ctx.ellipse(0, -17, 19, 4.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#0a0a0a";
+    ctx.fillRect(-10, -36, 20, 20);
+    ctx.fillStyle = "#161616";
+    ctx.fillRect(-8, -34, 16, 17);
+    ctx.fillStyle = "#7a1515";
+    ctx.fillRect(-9, -22, 18, 3.2);
+    ctx.fillStyle = "#a82020";
+    ctx.fillRect(-8, -21.5, 16, 1.2);
+    ctx.fillStyle = "rgba(255,255,255,0.12)";
+    ctx.fillRect(-7, -33, 2.5, 14);
+    ctx.restore();
+  }
+
   const PLATFORM_TYPES = {
     grass: { color: "#4f7d3a", edge: "#3a5e29", breakable: false, moving: false },
     log: { color: "#7a4a2c", edge: "#5a341d", breakable: false, moving: false },
@@ -2112,6 +2217,7 @@
 
   function drawChinchilla() {
     if (player.shieldTimer === 0 && player.rocketTimer === 0 && player.invincibleTimer > 0 && Math.floor(player.invincibleTimer / 5) % 2 === 0) return;
+    const pal = getSkinPalette();
     const screenY = player.y - cameraY;
     const sx = player.squash;
     const sy = 2 - player.squash;
@@ -2130,17 +2236,17 @@
 
     const tailSway = Math.sin(t * 0.06) * 4;
 
-    ctx.fillStyle = "#7d756c";
+    ctx.fillStyle = pal.tailDark;
     ctx.beginPath();
     ctx.ellipse(-19, -2 + tailSway, 14, 12, -0.4, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "#9c948c";
+    ctx.fillStyle = pal.tailMid;
     ctx.beginPath();
     ctx.ellipse(-21, -5 + tailSway, 11, 10, -0.5, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "#c0b6ad";
+    ctx.fillStyle = pal.tailTuft;
     for (let i = 0; i < 9; i += 1) {
       const a = -1.5 + i * 0.32;
       const rx = -21 + Math.cos(a) * 12;
@@ -2150,22 +2256,22 @@
       ctx.fill();
     }
 
-    ctx.fillStyle = "#e4dacf";
+    ctx.fillStyle = pal.tailTip;
     ctx.beginPath();
     ctx.ellipse(-28, -9 + tailSway, 6, 5, -0.3, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "rgba(80,70,60,0.35)";
+    ctx.fillStyle = pal.tailShadow;
     ctx.beginPath();
     ctx.ellipse(-21, -7 + tailSway, 9, 4, -0.5, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "#857d75";
+    ctx.fillStyle = pal.bodyDark;
     ctx.beginPath();
     ctx.ellipse(0, 12, 19, 15, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "#a89e96";
+    ctx.fillStyle = pal.bodyTuft;
     for (let i = 0; i < 9; i += 1) {
       const a = Math.PI * (1 + i / 8);
       const rx = Math.cos(a) * 18;
@@ -2175,12 +2281,12 @@
       ctx.fill();
     }
 
-    ctx.fillStyle = "#b8aea6";
+    ctx.fillStyle = pal.bodyMid;
     ctx.beginPath();
     ctx.ellipse(0, 9, 17, 14, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "#efe8e2";
+    ctx.fillStyle = pal.belly;
     ctx.beginPath();
     ctx.ellipse(0, 13, 12, 10, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -2196,12 +2302,12 @@
     ctx.arc(5, 20, 1, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "#a89e96";
+    ctx.fillStyle = pal.legOuter;
     ctx.beginPath();
     ctx.ellipse(-4.5, 11, 3, 4.8, 0.2, 0, Math.PI * 2);
     ctx.ellipse(4.5, 11, 3, 4.8, -0.2, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = "#c0b6ad";
+    ctx.fillStyle = pal.legInner;
     ctx.beginPath();
     ctx.ellipse(-4.5, 9, 2, 3, 0.2, 0, Math.PI * 2);
     ctx.ellipse(4.5, 9, 2, 3, -0.2, 0, Math.PI * 2);
@@ -2225,15 +2331,15 @@
     ctx.save();
     ctx.translate(-7, -13);
     ctx.rotate(-0.35 - wobble * 0.4);
-    ctx.fillStyle = "#857d75";
+    ctx.fillStyle = pal.earL1;
     ctx.beginPath();
     ctx.ellipse(0, -12, 6, 17, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = "#a89e96";
+    ctx.fillStyle = pal.earL2;
     ctx.beginPath();
     ctx.ellipse(0.5, -12, 4, 14, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = "#c69088";
+    ctx.fillStyle = pal.earL3;
     ctx.beginPath();
     ctx.ellipse(0.5, -11, 2.4, 11, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -2242,52 +2348,52 @@
     ctx.save();
     ctx.translate(6, -13);
     ctx.rotate(0.2 + wobble * 0.55);
-    ctx.fillStyle = "#a89e96";
+    ctx.fillStyle = pal.earR1;
     ctx.beginPath();
     ctx.ellipse(0, -14, 7, 19, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = "#c0b6ad";
+    ctx.fillStyle = pal.earR2;
     ctx.beginPath();
     ctx.ellipse(-0.5, -14, 5, 16, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = "#f0bcb2";
+    ctx.fillStyle = pal.earR3;
     ctx.beginPath();
     ctx.ellipse(0, -12, 3.8, 14, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = "rgba(160,90,80,0.55)";
+    ctx.fillStyle = pal.earRInner;
     ctx.beginPath();
     ctx.ellipse(0.6, -9, 1.6, 9, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
-    ctx.fillStyle = "#9a928a";
+    ctx.fillStyle = pal.headDark;
     ctx.beginPath();
     ctx.ellipse(0, -1, 15, 14, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "#b8aea6";
+    ctx.fillStyle = pal.headMid;
     ctx.beginPath();
     ctx.ellipse(0, -2, 14, 13, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "#cfc6be";
+    ctx.fillStyle = pal.headLight;
     ctx.beginPath();
     ctx.ellipse(0, 1, 11, 10, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "#a89e96";
+    ctx.fillStyle = pal.cheekOuter;
     ctx.beginPath();
     ctx.arc(-13, 2, 4.5, 0, Math.PI * 2);
     ctx.arc(13, 2, 4.5, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "#c0b6ad";
+    ctx.fillStyle = pal.cheekInner;
     ctx.beginPath();
     ctx.arc(-12, 1, 2.8, 0, Math.PI * 2);
     ctx.arc(12, 1, 2.8, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "#ece4dc";
+    ctx.fillStyle = pal.muzzle;
     ctx.beginPath();
     ctx.ellipse(0, 5, 7, 4.5, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -2338,7 +2444,7 @@
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(-0.7, 6.9, 1.4, 1.5);
 
-    ctx.strokeStyle = "rgba(40,35,30,0.8)";
+    ctx.strokeStyle = pal.whisker;
     ctx.lineWidth = 0.7;
     ctx.beginPath();
     ctx.moveTo(2.5, 3.5); ctx.quadraticCurveTo(12, 0, 22, -1);
@@ -2351,11 +2457,13 @@
     ctx.moveTo(-2.5, 6.2); ctx.quadraticCurveTo(-9, 9, -16, 12);
     ctx.stroke();
 
-    ctx.fillStyle = "rgba(230,150,150,0.5)";
+    ctx.fillStyle = pal.blush;
     ctx.beginPath();
     ctx.ellipse(9, 4, 2.8, 1.6, 0, 0, Math.PI * 2);
     ctx.ellipse(-9, 4, 2.8, 1.6, 0, 0, Math.PI * 2);
     ctx.fill();
+
+    if (selectedHat === "gentleman") drawGentlemanHat();
 
     ctx.restore();
   }
@@ -4179,6 +4287,7 @@
     });
   }
   refreshPlayerNameDisplay();
+  bindCosmeticButtons();
   leaderboardCache = getLeaderboardLocal();
   fetchLeaderboardFromServer();
 

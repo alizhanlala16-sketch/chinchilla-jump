@@ -42,6 +42,23 @@
         <input id="player-name-input" type="text" maxlength="16" autocomplete="nickname" spellcheck="false" placeholder="Например, Айлана">
         <p id="player-name-hint" class="player-name-hint hidden">Введи имя, чтобы попасть в таблицу рекордов</p>
       </div>
+      <div class="cosmetics-panel">
+        <div class="cosmetic-group">
+          <span class="cosmetic-label">Скин</span>
+          <div class="cosmetic-options" id="skin-options">
+            <button type="button" class="cosmetic-btn" data-skin="standard">Стандарт</button>
+            <button type="button" class="cosmetic-btn" data-skin="white">Белая</button>
+            <button type="button" class="cosmetic-btn" data-skin="black">Чёрная</button>
+          </div>
+        </div>
+        <div class="cosmetic-group">
+          <span class="cosmetic-label">Шляпа</span>
+          <div class="cosmetic-options" id="hat-options">
+            <button type="button" class="cosmetic-btn" data-hat="none">Без шляпы</button>
+            <button type="button" class="cosmetic-btn" data-hat="gentleman">Джентльмен</button>
+          </div>
+        </div>
+      </div>
       <div class="btn-row">
         <button id="start-btn">Играть</button>
         <button id="leaderboard-btn" class="btn-secondary" type="button">🏆 Рекорды</button>
