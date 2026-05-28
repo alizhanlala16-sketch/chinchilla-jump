@@ -10,7 +10,5 @@ Thumbs.db
 .env.local
 .env.*.local
 
-# Local agent memory (may contain chat snippets / secrets) — keep local only
-AGENTS.md
+# Chat history may contain secrets — keep local only
 SESSION_LOG.md
-.cursor/
