@@ -110,56 +110,65 @@ body.game-page {
   }
   #overlay,
   #gameover {
-    justify-content: flex-start;
-    overflow-x: hidden;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
-    touch-action: pan-y;
     padding:
-      calc(10px + env(safe-area-inset-top, 0px))
-      calc(14px + env(safe-area-inset-right, 0px))
-      calc(14px + env(safe-area-inset-bottom, 0px))
-      calc(14px + env(safe-area-inset-left, 0px));
+      calc(8px + env(safe-area-inset-top, 0px))
+      calc(10px + env(safe-area-inset-right, 0px))
+      calc(8px + env(safe-area-inset-bottom, 0px))
+      calc(10px + env(safe-area-inset-left, 0px));
   }
   #overlay h1 {
-    font-size: 26px;
-    margin-bottom: 4px;
+    font-size: 22px;
+    margin-bottom: 2px;
   }
-  #overlay .subtitle {
-    font-size: 13px;
-    margin-bottom: 10px;
-    max-width: 100%;
+  #overlay .overlay-subtitle {
+    font-size: 12px;
+    margin-bottom: 8px !important;
+    line-height: 1.3;
+  }
+  #overlay .controls-fold {
+    margin-bottom: 8px;
+  }
+  #overlay .controls-fold summary {
+    font-size: 12px;
+    padding: 7px 10px;
   }
   #overlay .controls {
-    font-size: 12px;
-    line-height: 1.5;
-    margin-bottom: 12px;
-    max-width: 100%;
+    font-size: 11px;
+    line-height: 1.45;
+    margin-bottom: 0;
   }
   #overlay .controls-desktop {
     display: none;
   }
   #overlay .controls-short {
-    font-size: 11px;
+    font-size: 10px;
     opacity: 0.85;
   }
   #overlay .player-name-field {
-    max-width: 100%;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
+  }
+  #overlay .player-name-field label {
+    font-size: 11px;
+    margin-bottom: 4px;
+  }
+  #overlay .player-name-field input[type="text"] {
+    padding: 9px 11px;
+    font-size: 15px;
   }
   #overlay .cosmetics-panel {
-    max-width: 100%;
-    margin-bottom: 10px;
-    gap: 8px;
+    margin-bottom: 6px;
+    gap: 6px;
   }
   #overlay .cosmetic-btn {
-    padding: 6px 10px !important;
-    font-size: 11px !important;
+    padding: 7px 2px !important;
+    font-size: 10px !important;
   }
-  #overlay .btn-row button {
-    padding: 11px 20px;
-    font-size: 15px;
+  #overlay .overlay-actions .btn-row {
+    margin-top: 0;
+  }
+  #overlay .overlay-actions button {
+    padding: 10px 14px;
+    font-size: 14px;
   }
   #gameover h2 {
     font-size: 28px;
@@ -231,12 +240,85 @@ body.game-page {
   inset: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: flex-start;
   text-align: center;
-  padding: 24px;
+  padding: 16px 14px 12px;
   background: rgba(10, 12, 28, 0.72);
   backdrop-filter: blur(4px);
+  overflow: hidden;
+  min-height: 0;
+}
+
+#overlay .overlay-inner {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 6px;
+}
+
+#overlay .overlay-actions {
+  flex: 0 0 auto;
+  width: 100%;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 12, 28, 0.55);
+}
+
+.controls-fold {
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: 10px;
+  text-align: left;
+}
+
+.controls-fold summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 224, 138, 0.9);
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.controls-fold summary::-webkit-details-marker {
+  display: none;
+}
+
+.controls-fold summary::after {
+  content: " ▾";
+  opacity: 0.7;
+}
+
+.controls-fold[open] summary::after {
+  content: " ▴";
+}
+
+.controls-fold .controls {
+  margin: 8px 0 0;
+  padding: 0 4px;
+}
+
+.overlay-subtitle {
+  margin-bottom: 10px !important;
+}
+
+#gameover {
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
 }
 
 #overlay.visible,
@@ -323,8 +405,8 @@ button:hover {
 
 .player-name-field {
   width: 100%;
-  max-width: 280px;
-  margin: 0 0 16px;
+  max-width: 100%;
+  margin: 0 0 10px;
   text-align: left;
 }
 
@@ -369,48 +451,75 @@ button:hover {
 
 .cosmetics-panel {
   width: 100%;
-  max-width: 320px;
-  margin: 0 0 14px;
+  max-width: 100%;
+  margin: 0 0 8px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .cosmetic-group {
   text-align: left;
+  width: 100%;
 }
 
 .cosmetic-label {
   display: block;
-  margin-bottom: 6px;
-  font-size: 12px;
+  margin-bottom: 4px;
+  font-size: 11px;
   font-weight: 600;
   color: rgba(255, 224, 138, 0.85);
   letter-spacing: 0.04em;
 }
 
 .cosmetic-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  display: grid;
+  gap: 5px;
+  width: 100%;
+}
+
+.cosmetic-options-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.cosmetic-options-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .cosmetic-btn {
-  padding: 7px 12px !important;
-  font-size: 12px !important;
+  width: 100%;
+  min-width: 0;
+  padding: 8px 4px !important;
+  font-size: 11px !important;
   font-weight: 600 !important;
-  border-radius: 999px !important;
+  border-radius: 10px !important;
   background: rgba(255, 255, 255, 0.07) !important;
   color: var(--text) !important;
   border: 1px solid rgba(255, 255, 255, 0.14) !important;
   box-shadow: none !important;
   cursor: pointer;
-  transition: background 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
+  transition: background 0.12s ease, border-color 0.12s ease;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cosmetic-btn .lbl-short {
+  display: none;
+}
+
+@media (max-aspect-ratio: 480/720), (max-width: 600px) {
+  .cosmetic-btn .lbl-full {
+    display: none;
+  }
+  .cosmetic-btn .lbl-short {
+    display: inline;
+  }
 }
 
 .cosmetic-btn:hover {
   background: rgba(255, 255, 255, 0.12) !important;
-  transform: translateY(-1px);
 }
 
 .cosmetic-btn.active {

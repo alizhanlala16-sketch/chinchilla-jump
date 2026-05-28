@@ -26,40 +26,45 @@
       </div>
     </div>
     <div id="overlay" class="visible">
-      <h1>Chinchilla &amp; Jump</h1>
-      <p class="subtitle">Прыгай по веткам и собирай сено в волшебном лесу!</p>
-      <div class="controls">
-        <p class="controls-desktop"><kbd>←</kbd> <kbd>→</kbd> или <kbd>A</kbd> <kbd>D</kbd> — движение (ПК)</p>
-        <p class="controls-desktop"><kbd>Пробел</kbd> / <kbd>↑</kbd> / <kbd>W</kbd> — прыжок (ПК)</p>
-        <p class="controls-mobile">На телефоне: слева <strong>↑</strong> — прыжок, справа <strong>← →</strong> — движение</p>
-        <p>В воздухе ещё раз — двойной прыжок</p>
-        <p class="controls-short">Хрупкие ветки трескаются и восстанавливаются</p>
-        <p class="controls-short">Бонусы: <strong>ракета</strong>, <strong>щит</strong>, <strong>лазеры</strong></p>
-        <p class="controls-desktop"><kbd>M</kbd> — музыка вкл/выкл</p>
-      </div>
-      <div class="player-name-field">
-        <label for="player-name-input">Твоё имя</label>
-        <input id="player-name-input" type="text" maxlength="16" autocomplete="nickname" spellcheck="false" placeholder="Например, Айлана">
-        <p id="player-name-hint" class="player-name-hint hidden">Введи имя, чтобы попасть в таблицу рекордов</p>
-      </div>
-      <div class="cosmetics-panel">
-        <div class="cosmetic-group">
-          <span class="cosmetic-label">Скин</span>
-          <div class="cosmetic-options" id="skin-options">
-            <button type="button" class="cosmetic-btn" data-skin="standard">Стандарт</button>
-            <button type="button" class="cosmetic-btn" data-skin="white">Белая</button>
-            <button type="button" class="cosmetic-btn" data-skin="black">Чёрная</button>
+      <div class="overlay-inner">
+        <h1>Chinchilla &amp; Jump</h1>
+        <p class="subtitle overlay-subtitle">Прыгай по веткам и собирай сено!</p>
+        <details class="controls-fold">
+          <summary>Как играть</summary>
+          <div class="controls">
+            <p class="controls-desktop"><kbd>←</kbd> <kbd>→</kbd> или <kbd>A</kbd> <kbd>D</kbd> — движение (ПК)</p>
+            <p class="controls-desktop"><kbd>Пробел</kbd> / <kbd>↑</kbd> / <kbd>W</kbd> — прыжок (ПК)</p>
+            <p class="controls-mobile">На телефоне: слева <strong>↑</strong> — прыжок, справа <strong>← →</strong> — движение</p>
+            <p>В воздухе ещё раз — двойной прыжок</p>
+            <p class="controls-short">Хрупкие ветки трескаются и восстанавливаются</p>
+            <p class="controls-short">Бонусы: <strong>ракета</strong>, <strong>щит</strong>, <strong>лазеры</strong></p>
+            <p class="controls-desktop"><kbd>M</kbd> — музыка вкл/выкл</p>
+          </div>
+        </details>
+        <div class="player-name-field">
+          <label for="player-name-input">Твоё имя</label>
+          <input id="player-name-input" type="text" maxlength="16" autocomplete="nickname" spellcheck="false" placeholder="Например, Айлана">
+          <p id="player-name-hint" class="player-name-hint hidden">Введи имя для таблицы рекордов</p>
+        </div>
+        <div class="cosmetics-panel">
+          <div class="cosmetic-group">
+            <span class="cosmetic-label">Скин</span>
+            <div class="cosmetic-options cosmetic-options-3" id="skin-options">
+              <button type="button" class="cosmetic-btn" data-skin="standard"><span class="lbl-full">Стандарт</span><span class="lbl-short">Серая</span></button>
+              <button type="button" class="cosmetic-btn" data-skin="white"><span class="lbl-full">Белая</span><span class="lbl-short">Белая</span></button>
+              <button type="button" class="cosmetic-btn" data-skin="black"><span class="lbl-full">Чёрная</span><span class="lbl-short">Чёрн.</span></button>
+            </div>
+          </div>
+          <div class="cosmetic-group">
+            <span class="cosmetic-label">Шляпа</span>
+            <div class="cosmetic-options cosmetic-options-2" id="hat-options">
+              <button type="button" class="cosmetic-btn" data-hat="none"><span class="lbl-full">Без шляпы</span><span class="lbl-short">Нет</span></button>
+              <button type="button" class="cosmetic-btn" data-hat="gentleman"><span class="lbl-full">Джентльмен</span><span class="lbl-short">🎩</span></button>
+            </div>
           </div>
         </div>
-        <div class="cosmetic-group">
-          <span class="cosmetic-label">Шляпа</span>
-          <div class="cosmetic-options" id="hat-options">
-            <button type="button" class="cosmetic-btn" data-hat="none">Без шляпы</button>
-            <button type="button" class="cosmetic-btn" data-hat="gentleman">Джентльмен</button>
-          </div>
-        </div>
       </div>
-      <div class="btn-row">
+      <div class="overlay-actions btn-row">
         <button id="start-btn">Играть</button>
         <button id="leaderboard-btn" class="btn-secondary" type="button">🏆 Рекорды</button>
       </div>
