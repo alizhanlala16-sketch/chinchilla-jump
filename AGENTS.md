@@ -90,6 +90,10 @@ forest 790 → sky 10 → space 200 → alien 780 → sky 10 → space 200 → f
 ```
 Между темами — мягкий fade. Функция `getThemeBlend(h)` возвращает текущее смешение `{a, b, t}`.
 
+### Управление
+- **ПК:** ←/→ или A/D — движение; Space / ↑ / W — прыжок; M — музыка вкл/выкл; клик мышью — прыжок.
+- **Мобайл:** определяется через `(hover: none) and (pointer: coarse)`. Кнопки `#ctrl-jump` (слева), `#ctrl-left`/`#ctrl-right` (справа). На десктопе мобильные кнопки скрыты CSS.
+
 ### Скины и шляпы
 - Выбор на стартовом экране `#overlay`: блок `.cosmetics-panel`.
 - **Скины** (`CHIN_SKINS`, localStorage `chinchilla-skin`): `standard` (серая), `white` (белая), `black` (чёрная). Палитра через `getSkinPalette()` в `drawChinchilla()`.
