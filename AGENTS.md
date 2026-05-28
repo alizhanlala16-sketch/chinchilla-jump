@@ -30,6 +30,9 @@
 | `splash.js` | Анимация фона лендинга (шиншилла + лес + светлячки + звёзды) |
 | `game.js` | Вся игровая логика и рендеринг (~3860 строк, одна IIFE) |
 | `style.css` | Общие стили всех страниц (тёмная палитра, оранжево-золотой акцент) |
+| `api/leaderboard.js` | Serverless API: GET/POST таблицы рекордов (Vercel Postgres) |
+| `db/schema.sql` | SQL-схема таблицы `scores` |
+| `package.json` | Зависимость `@vercel/postgres` для API |
 | `vercel.json` | `cleanUrls: true`, `trailingSlash: false` |
 | `deploy.ps1` | Деплой на Vercel через `vercel deploy --prod` с токеном из `.env` |
 | `play.bat` | Локальный запуск (открывает `index.html`) |
@@ -98,9 +101,11 @@ forest 790 → sky 10 → space 200 → alien 780 → sky 10 → space 200 → f
 ### Рекорд и таблица рекордов
 - **Best score** (общий рекорд в HUD) — `localStorage["chinchilla-best"]` (просто число).
 - **Имя игрока** — `localStorage["chinchilla-player-name"]` (до 16 символов). Поле `#player-name-input` на стартовом экране `#overlay`; сохраняется при blur и перед стартом игры. Модал `#name-prompt` — только для «Сменить имя» с экрана проигрыша (когда меню скрыто).
-- **Таблица рекордов** — `localStorage["chinchilla-leaderboard"]` (JSON), топ-10 объектов вида `{ name, score, height, date }`. Сортировка: `score desc → height desc → date asc`. Рендерится в модал `#leaderboard` через `renderLeaderboard()` с HTML-эскейпом имён (`escapeHtml`).
-- **Кнопки «🏆 Рекорды»** есть в стартовом меню и на экране проигрыша. Внутри таблицы — «Закрыть» и «Сменить имя».
-- На экране проигрыша показывается строка «Место в таблице: N из M».
+- **Глобальная таблица** — PostgreSQL на Vercel (`scores`: `name`, `score`, `height`, `created_at`). API `GET/POST /api/leaderboard`, топ-100 результатов + `totalPlayers` (уникальные имена). Таблица создаётся автоматически при первом запросе (`api/leaderboard.js`).
+- **Локальный fallback** — `localStorage["chinchilla-leaderboard"]`, если API недоступен (нет `POSTGRES_URL`, оффлайн, локальный `file://`).
+- **Клиент:** `fetchLeaderboardFromServer()`, `saveScoreAsync()`, кэш `leaderboardCache`. Статус в `#leaderboard-status`: «Онлайн · игроков в базе: N» или «Оффлайн · …».
+- **Кнопки «🏆 Рекорды»** — стартовое меню и экран проигрыша. «Сменить имя» / «Закрыть» в модалке.
+- На экране проигрыша: «Место в таблице: N из M» (M = число игроков в базе при онлайн-режиме).
 
 ---
 
@@ -116,7 +121,7 @@ forest 790 → sky 10 → space 200 → alien 780 → sky 10 → space 200 → f
 6. **Hazards (607–798):** `ensureHazards`, `updateSaws`, `updateFoxes`, `updateSquirrels`, `updateKnives`.
 7. **Physics (800–943):** `updatePlatforms`, `updatePlayer` (коллизии, камера, падение).
 8. **Items (945–986):** `updateHays`, `updateParticles`, `updateBackgroundLeaves`, `updateHud`.
-9. **State / music / leaderboard (988–~1400):** `endGame`, лидерборд (`LEADERBOARD_KEY`, `getPlayerName`, `setPlayerNameValue`, `getLeaderboard`, `saveScore`, `renderLeaderboard`, `showLeaderboard`, `hideLeaderboard`, `showNamePrompt`), `startMusic`, `toggleMusic`, `setPlayingUi`, `startGame`/`actuallyStartGame`.
+9. **State / music / leaderboard (988–~1400):** `endGame`, лидерборд (local + `/api/leaderboard`), `startMusic`, `toggleMusic`, `setPlayingUi`, `startGame`/`actuallyStartGame`.
 10. **Rendering BG (1246–1554):** темы (`drawForestBg`, `drawSkyBg`, `drawSpaceBg`, `drawAlienBg`), деревья, листья.
 11. **Render entities (1555–3733):** `drawPlatforms`, `drawHay`, `drawChinchilla` (~250 строк sprite), `drawApples`, `drawRockets`, `drawShields`, `drawLasers`, `drawSaws`, `drawFoxes`, `drawSquirrels`, `drawKnives`, `drawLives`, `drawPowerupTimers`.
 12. **Damage / rescue (2245–2376):** `damagePlayer`, `rescueWithShield`, `spawnShieldHit`, `spawnRocketTrail`.
@@ -156,6 +161,15 @@ forest 790 → sky 10 → space 200 → alien 780 → sky 10 → space 200 → f
 Скрипт читает `.env` (где `VERCEL_TOKEN`, опционально `VERCEL_SCOPE=alizhan-s-projects2`), добавляет Node.js в PATH и запускает `vercel deploy --prod --yes --scope $scope`.
 
 Альтернативно — push в `main` на GitHub запускает авто-деплой через Vercel Git Integration.
+
+### База данных (таблица рекордов)
+
+1. Vercel Dashboard → проект **chinchilla-jump** → **Storage** → **Create Database** → **Postgres** (Neon).
+2. Подключить базу к проекту — Vercel сам добавит `POSTGRES_URL` в Environment Variables.
+3. Задеплоить заново (push в `main` или `.\deploy.ps1`).
+4. Таблица `scores` создаётся автоматически при первом запросе к `/api/leaderboard`. SQL вручную: `db/schema.sql`.
+
+Без `POSTGRES_URL` игра работает, но таблица только локальная (localStorage на устройстве).
 
 ---
 

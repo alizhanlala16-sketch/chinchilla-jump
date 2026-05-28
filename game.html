@@ -29,13 +29,13 @@
       <h1>Chinchilla &amp; Jump</h1>
       <p class="subtitle">Прыгай по веткам и собирай сено в волшебном лесу!</p>
       <div class="controls">
-        <p><kbd>←</kbd> <kbd>→</kbd> или <kbd>A</kbd> <kbd>D</kbd> — движение (ПК)</p>
-        <p><kbd>Пробел</kbd> / <kbd>↑</kbd> / <kbd>W</kbd> — прыжок (ПК)</p>
+        <p class="controls-desktop"><kbd>←</kbd> <kbd>→</kbd> или <kbd>A</kbd> <kbd>D</kbd> — движение (ПК)</p>
+        <p class="controls-desktop"><kbd>Пробел</kbd> / <kbd>↑</kbd> / <kbd>W</kbd> — прыжок (ПК)</p>
         <p class="controls-mobile">На телефоне: слева <strong>↑</strong> — прыжок, справа <strong>← →</strong> — движение</p>
         <p>В воздухе ещё раз — двойной прыжок</p>
-        <p>Хрупкие ветки трескаются и через ~5 сек восстанавливаются</p>
-        <p>Бонусы: <strong>ракета</strong> — 6 с, <strong>щит</strong> — 19 с, <strong>лазеры из ушей</strong> — 15 с уничтожения врагов</p>
-        <p><kbd>M</kbd> — музыка вкл/выкл</p>
+        <p class="controls-short">Хрупкие ветки трескаются и восстанавливаются</p>
+        <p class="controls-short">Бонусы: <strong>ракета</strong>, <strong>щит</strong>, <strong>лазеры</strong></p>
+        <p class="controls-desktop"><kbd>M</kbd> — музыка вкл/выкл</p>
       </div>
       <div class="player-name-field">
         <label for="player-name-input">Твоё имя</label>
@@ -60,6 +60,7 @@
     <div id="leaderboard" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="lb-title">
       <div class="modal-card">
         <h2 id="lb-title">🏆 Таблица рекордов</h2>
+        <p id="leaderboard-status" class="leaderboard-status hidden"></p>
         <table class="leaderboard-table">
           <thead>
             <tr><th>#</th><th>Имя</th><th>Сено</th><th>Высота</th></tr>

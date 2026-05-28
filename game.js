@@ -997,28 +997,23 @@
     finalHeightEl.textContent = maxHeight;
 
     const playerName = getPlayerName() || "Аноним";
-    const updatedBoard = saveScore(playerName, score, maxHeight);
-    const rankLine = document.getElementById("final-rank-line");
-    if (rankLine) {
-      const myEntries = updatedBoard
-        .map((e, i) => ({ e, i }))
-        .filter((x) => x.e.name === playerName && x.e.score === score && x.e.height === maxHeight);
-      if (myEntries.length > 0) {
-        const place = myEntries[myEntries.length - 1].i + 1;
-        rankLine.textContent = `Место в таблице: ${place} из ${updatedBoard.length}`;
-        rankLine.classList.remove("hidden");
-      } else {
-        rankLine.classList.add("hidden");
-      }
-    }
-
     gameoverEl.classList.remove("hidden");
     gameoverEl.classList.add("visible");
+
+    saveScoreAsync(playerName, score, maxHeight).then(function (updatedBoard) {
+      updateFinalRankLine(updatedBoard, playerName, score, maxHeight);
+    });
   }
 
   const LEADERBOARD_KEY = "chinchilla-leaderboard";
   const PLAYER_NAME_KEY = "chinchilla-player-name";
-  const MAX_LEADERBOARD = 10;
+  const MAX_LEADERBOARD = 100;
+  const LEADERBOARD_API = "/api/leaderboard";
+
+  let leaderboardCache = [];
+  let leaderboardOnline = false;
+  let leaderboardTotalPlayers = 0;
+  let leaderboardLoading = false;
 
   function getPlayerName() {
     try { return (localStorage.getItem(PLAYER_NAME_KEY) || "").trim(); }
@@ -1068,7 +1063,7 @@
     if (hint) hint.classList.remove("hidden");
   }
 
-  function getLeaderboard() {
+  function getLeaderboardLocal() {
     try {
       const raw = localStorage.getItem(LEADERBOARD_KEY);
       if (!raw) return [];
@@ -1078,23 +1073,121 @@
     } catch (e) { return []; }
   }
 
-  function saveScore(name, sc, ht) {
+  function saveScoreLocal(name, sc, ht) {
     const entry = {
       name: String(name || "Аноним").slice(0, 16),
       score: sc | 0,
       height: ht | 0,
       date: Date.now(),
     };
-    const list = getLeaderboard();
+    const list = getLeaderboardLocal();
     list.push(entry);
-    list.sort((a, b) => {
+    list.sort(function (a, b) {
       if (b.score !== a.score) return b.score - a.score;
       if (b.height !== a.height) return b.height - a.height;
       return a.date - b.date;
     });
     const top = list.slice(0, MAX_LEADERBOARD);
     try { localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(top)); } catch (e) {}
+    leaderboardCache = top;
     return top;
+  }
+
+  function applyLeaderboardPayload(data) {
+    if (data && Array.isArray(data.entries)) {
+      leaderboardCache = data.entries;
+      leaderboardTotalPlayers = data.totalPlayers | 0;
+      leaderboardOnline = true;
+      try { localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(leaderboardCache)); } catch (e) {}
+      return leaderboardCache;
+    }
+    return null;
+  }
+
+  function fetchLeaderboardFromServer() {
+    return fetch(LEADERBOARD_API, { method: "GET", cache: "no-store" })
+      .then(function (res) {
+        if (!res.ok) throw new Error("fetch failed");
+        return res.json();
+      })
+      .then(function (data) {
+        applyLeaderboardPayload(data);
+        return leaderboardCache;
+      })
+      .catch(function () {
+        leaderboardOnline = false;
+        leaderboardCache = getLeaderboardLocal();
+        return leaderboardCache;
+      });
+  }
+
+  function saveScoreAsync(name, sc, ht) {
+    const entry = {
+      name: String(name || "Аноним").slice(0, 16),
+      score: sc | 0,
+      height: ht | 0,
+    };
+    return fetch(LEADERBOARD_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(entry),
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error("post failed");
+        return res.json();
+      })
+      .then(function (data) {
+        applyLeaderboardPayload(data);
+        return leaderboardCache;
+      })
+      .catch(function () {
+        leaderboardOnline = false;
+        return saveScoreLocal(entry.name, entry.score, entry.height);
+      });
+  }
+
+  function updateFinalRankLine(board, playerName, sc, ht) {
+    const rankLine = document.getElementById("final-rank-line");
+    if (!rankLine || !board || board.length === 0) return;
+    const myEntries = board
+      .map(function (e, i) { return { e: e, i: i }; })
+      .filter(function (x) {
+        return x.e.name === playerName && x.e.score === sc && x.e.height === ht;
+      });
+    if (myEntries.length > 0) {
+      const place = myEntries[myEntries.length - 1].i + 1;
+      const totalLabel = leaderboardOnline && leaderboardTotalPlayers > 0
+        ? leaderboardTotalPlayers + " игроков"
+        : board.length + " в топе";
+      rankLine.textContent = "Место в таблице: " + place + " из " + totalLabel;
+      rankLine.classList.remove("hidden");
+    } else if (placeBeyondTop(board, sc, ht)) {
+      rankLine.textContent = "Результат сохранён — ниже топ-" + MAX_LEADERBOARD;
+      rankLine.classList.remove("hidden");
+    }
+  }
+
+  function placeBeyondTop(board, sc, ht) {
+    if (board.length < MAX_LEADERBOARD) return true;
+    const last = board[board.length - 1];
+    if (sc > last.score) return true;
+    if (sc === last.score && ht > last.height) return true;
+    return false;
+  }
+
+  function setLeaderboardStatus() {
+    const el = document.getElementById("leaderboard-status");
+    if (!el) return;
+    el.classList.remove("hidden", "lb-online", "lb-offline");
+    if (leaderboardOnline) {
+      el.textContent = leaderboardTotalPlayers > 0
+        ? "Онлайн · игроков в базе: " + leaderboardTotalPlayers
+        : "Онлайн · общая таблица";
+      el.classList.add("lb-online");
+    } else {
+      el.textContent = "Оффлайн · показаны сохранённые на этом устройстве";
+      el.classList.add("lb-offline");
+    }
   }
 
   function escapeHtml(s) {
@@ -1106,7 +1199,11 @@
   function renderLeaderboard() {
     const tbody = document.getElementById("leaderboard-body");
     if (!tbody) return;
-    const list = getLeaderboard();
+    const list = leaderboardCache.length ? leaderboardCache : getLeaderboardLocal();
+    if (leaderboardLoading) {
+      tbody.innerHTML = '<tr><td colspan="4" class="lb-empty">Загрузка...</td></tr>';
+      return;
+    }
     if (list.length === 0) {
       tbody.innerHTML = '<tr><td colspan="4" class="lb-empty">Пока пусто — сыграй первую партию!</td></tr>';
       return;
@@ -1114,12 +1211,18 @@
     tbody.innerHTML = list.map(function (e, i) {
       return "<tr><td>" + (i + 1) + "</td><td>" + escapeHtml(e.name) + "</td><td>" + e.score + "</td><td>" + e.height + "</td></tr>";
     }).join("");
+    setLeaderboardStatus();
   }
 
   function showLeaderboard() {
-    renderLeaderboard();
     const m = document.getElementById("leaderboard");
     if (m) m.classList.remove("hidden");
+    leaderboardLoading = true;
+    renderLeaderboard();
+    fetchLeaderboardFromServer().then(function () {
+      leaderboardLoading = false;
+      renderLeaderboard();
+    });
   }
 
   function hideLeaderboard() {
@@ -4076,6 +4179,8 @@
     });
   }
   refreshPlayerNameDisplay();
+  leaderboardCache = getLeaderboardLocal();
+  fetchLeaderboardFromServer();
 
   resetGame();
   loop();

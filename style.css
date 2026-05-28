@@ -94,12 +94,92 @@ body.game-page {
   #game-wrapper {
     border-radius: 0;
     box-shadow: none;
+    width: 100vw;
+    height: 100dvh;
+    max-width: 100vw;
+    max-height: 100dvh;
   }
   .home-link {
     font-size: 12px;
     padding: 5px 10px;
-    top: 8px;
+    top: max(8px, env(safe-area-inset-top, 0px));
+    left: max(8px, env(safe-area-inset-left, 0px));
+  }
+  body.game-page {
+    align-items: stretch;
+  }
+  #overlay,
+  #gameover {
+    justify-content: flex-start;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    padding:
+      calc(10px + env(safe-area-inset-top, 0px))
+      calc(14px + env(safe-area-inset-right, 0px))
+      calc(14px + env(safe-area-inset-bottom, 0px))
+      calc(14px + env(safe-area-inset-left, 0px));
+  }
+  #overlay h1 {
+    font-size: 26px;
+    margin-bottom: 4px;
+  }
+  #overlay .subtitle {
+    font-size: 13px;
+    margin-bottom: 10px;
+    max-width: 100%;
+  }
+  #overlay .controls {
+    font-size: 12px;
+    line-height: 1.5;
+    margin-bottom: 12px;
+    max-width: 100%;
+  }
+  #overlay .controls-desktop {
+    display: none;
+  }
+  #overlay .controls-short {
+    font-size: 11px;
+    opacity: 0.85;
+  }
+  #overlay .player-name-field {
+    max-width: 100%;
+    margin-bottom: 10px;
+  }
+  #overlay .btn-row button {
+    padding: 11px 20px;
+    font-size: 15px;
+  }
+  #gameover h2 {
+    font-size: 28px;
+  }
+  #gameover p {
+    font-size: 16px;
+  }
+  .hud-item {
+    min-width: 72px;
+    padding: 6px 8px;
+  }
+  .hud-item .label {
+    font-size: 9px;
+  }
+  .hud-item span:last-child {
+    font-size: 18px;
+  }
+  #hud {
+    top: max(8px, env(safe-area-inset-top, 0px));
     left: 8px;
+    right: 8px;
+  }
+  .modal {
+    padding: 10px;
+    align-items: flex-start;
+    padding-top: calc(12px + env(safe-area-inset-top, 0px));
+  }
+  .modal-card {
+    max-height: calc(100dvh - 24px - env(safe-area-inset-top, 0px));
   }
 }
 
@@ -378,6 +458,21 @@ button:hover {
   padding: 18px 8px;
   color: var(--text-dim);
   font-style: italic;
+}
+
+.leaderboard-status {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin: -6px 0 10px;
+  line-height: 1.4;
+}
+
+.leaderboard-status.lb-online {
+  color: rgba(140, 220, 160, 0.9);
+}
+
+.leaderboard-status.lb-offline {
+  color: rgba(255, 180, 120, 0.85);
 }
 
 .modal-card input[type="text"] {
