@@ -304,23 +304,30 @@
     cameraX = 0;
     worldWidth = W;
     cameraY = 0;
-    const steps = 8 + (levelNum - 1) * 3;
+    const steps = 6 + (levelNum - 1) * 2;
     const startY = H - 80;
     const startPlat = makePlatform(W / 2 - 80, startY, 160, "grass");
     platforms.push(startPlat);
     let y = startY;
+    let prevCenter = W / 2;
     const midPlatforms = [];
+    const MAX_H_REACH = 150;
     for (let i = 1; i < steps; i += 1) {
-      y -= PLATFORM_GAP + rand(-8, 8);
-      const w = rand(85, 125);
-      const x = clamp(rand(25, W - w - 25), 15, W - w - 15);
-      const p = makePlatform(x, y, w, i % 2 === 0 ? "log" : "grass");
+      y -= PLATFORM_GAP + rand(-4, 4);
+      const w = rand(95, 125);
+      const minC = Math.max(w / 2 + 18, prevCenter - MAX_H_REACH);
+      const maxC = Math.min(W - w / 2 - 18, prevCenter + MAX_H_REACH);
+      const cx = rand(minC, maxC);
+      const px = cx - w / 2;
+      const p = makePlatform(px, y, w, i % 2 === 0 ? "log" : "grass");
       platforms.push(p);
       midPlatforms.push(p);
+      prevCenter = cx;
     }
     const portalY = y - PLATFORM_GAP * 0.55;
-    platforms.push(makePlatform(W / 2 - 72, portalY, 144, "log"));
-    portal = { x: W / 2, y: portalY - 40, r: 36, active: true, spin: 0, pulse: 0 };
+    const portalPx = clamp(prevCenter - 72, 20, W - 144 - 20);
+    platforms.push(makePlatform(portalPx, portalY, 144, "log"));
+    portal = { x: portalPx + 72, y: portalY - 40, r: 36, active: true, spin: 0, pulse: 0 };
     player.x = W / 2;
     player.y = startY - 36;
     player.vx = 0;
@@ -330,9 +337,10 @@
     highestPlatformY = portalY;
 
     const hayChance = 0.6;
-    const squirrelCount = Math.min(midPlatforms.length, 1 + Math.floor((levelNum - 1) * 0.8));
-    const sawCount = Math.floor((levelNum - 1) * 0.6);
-    const foxCount = Math.max(0, Math.floor((levelNum - 2) * 0.7));
+    const maxSquirrels = Math.floor(midPlatforms.length * 0.5);
+    const squirrelCount = Math.min(maxSquirrels, 1 + Math.floor((levelNum - 1) * 0.5));
+    const sawCount = Math.max(0, Math.floor((levelNum - 1) * 0.5));
+    const foxCount = Math.max(0, Math.floor((levelNum - 2) * 0.5));
 
     for (const p of midPlatforms) {
       if (Math.random() < hayChance) addHayToPlatform(p);
@@ -343,12 +351,13 @@
     }
     const sawSpan = startY - portalY;
     for (let i = 0; i < sawCount; i += 1) {
-      const sawY = startY - (i + 1) * (sawSpan / (sawCount + 1));
+      const sawY = startY - (i + 1.5) * (sawSpan / (sawCount + 2));
       const fromLeft = Math.random() < 0.5;
-      spawnLevelSaw(fromLeft ? 30 : W - 30, sawY, (fromLeft ? 1 : -1) * (2.6 + Math.random() * 1.5 + levelNum * 0.15));
+      const speed = 2.0 + Math.random() * 0.8 + levelNum * 0.1;
+      spawnLevelSaw(fromLeft ? 30 : W - 30, sawY, (fromLeft ? 1 : -1) * speed);
     }
     for (let i = 0; i < foxCount; i += 1) {
-      const foxY = startY - (i + 1) * (sawSpan / (foxCount + 1)) + rand(-40, 40);
+      const foxY = startY - (i + 1.5) * (sawSpan / (foxCount + 2));
       const side = Math.random() < 0.5 ? "left" : "right";
       spawnLevelFox(side === "left" ? 22 : W - 22, foxY, side);
     }
@@ -356,24 +365,30 @@
 
   function buildHorizontalLevel(levelNum) {
     levelOrient = "horizontal";
-    const steps = 6 + (levelNum - 1) * 3;
+    const steps = 5 + (levelNum - 1) * 2;
     const groundY = H - 110;
-    worldWidth = 160 + steps * 88 + 110;
+    worldWidth = 160 + steps * 96 + 130;
     cameraX = 0;
     cameraY = Math.max(0, groundY - CAMERA_FOLLOW + 10);
-    platforms.push(makePlatform(8, groundY, 118, "grass"));
+    platforms.push(makePlatform(8, groundY, 130, "grass"));
     let x = 40;
+    let prevY = groundY;
     const midPlatforms = [];
     for (let i = 1; i < steps; i += 1) {
-      x += rand(78, 108);
-      const dy = rand(-32, 28);
-      const p = makePlatform(x, groundY + dy, rand(84, 120), i % 3 === 0 ? "log" : "grass");
+      const w = rand(96, 130);
+      const gap = rand(48, 78);
+      x += w + gap;
+      const dy = clamp(prevY + rand(-22, 22), groundY - 70, groundY + 30) - groundY;
+      const py = groundY + dy;
+      const p = makePlatform(x, py, w, i % 3 === 0 ? "log" : "grass");
       platforms.push(p);
       midPlatforms.push(p);
+      prevY = py;
     }
-    x = worldWidth - 128;
-    platforms.push(makePlatform(x, groundY, 120, "log"));
-    portal = { x: worldWidth - 52, y: groundY - 44, r: 36, active: true, spin: 0, pulse: 0 };
+    const finalX = x + 100;
+    worldWidth = Math.max(worldWidth, finalX + 200);
+    platforms.push(makePlatform(finalX, groundY, 140, "log"));
+    portal = { x: finalX + 70, y: groundY - 44, r: 36, active: true, spin: 0, pulse: 0 };
     player.x = 64;
     player.y = groundY - 36;
     player.vx = 0;
@@ -383,9 +398,10 @@
     highestPlatformY = groundY - 200;
 
     const hayChance = 0.65;
-    const squirrelCount = Math.min(midPlatforms.length, 1 + Math.floor((levelNum - 1) * 0.8));
-    const sawCount = Math.floor((levelNum - 1) * 0.7);
-    const foxCount = Math.max(0, Math.floor((levelNum - 2) * 0.8));
+    const maxSquirrels = Math.floor(midPlatforms.length * 0.5);
+    const squirrelCount = Math.min(maxSquirrels, 1 + Math.floor((levelNum - 1) * 0.5));
+    const sawCount = Math.max(0, Math.floor((levelNum - 1) * 0.5));
+    const foxCount = Math.max(0, Math.floor((levelNum - 2) * 0.6));
 
     for (const p of midPlatforms) {
       if (Math.random() < hayChance) addHayToPlatform(p);
@@ -394,23 +410,25 @@
     for (let i = 0; i < squirrelCount && i < shuffled.length; i += 1) {
       addSquirrelToPlatform(shuffled[i]);
     }
+    const safeStartX = 240;
+    const safeEndX = worldWidth - 160;
     for (let i = 0; i < sawCount; i += 1) {
-      const sx = 220 + (i + 0.5) * ((worldWidth - 320) / Math.max(1, sawCount));
-      const sy = groundY - 70 + rand(-20, 20);
-      const speed = 2.4 + Math.random() * 1.4 + levelNum * 0.15;
+      const sx = safeStartX + (i + 0.5) * ((safeEndX - safeStartX) / Math.max(1, sawCount));
+      const sy = groundY - 80 + rand(-15, 15);
+      const speed = 1.8 + Math.random() * 0.8 + levelNum * 0.1;
       saws.push({
         x: sx,
         y: sy,
         vx: (Math.random() < 0.5 ? 1 : -1) * speed,
         r: 18,
         rotation: rand(0, Math.PI * 2),
-        rangeMin: Math.max(150, sx - 110),
-        rangeMax: Math.min(worldWidth - 60, sx + 110),
+        rangeMin: Math.max(180, sx - 80),
+        rangeMax: Math.min(worldWidth - 60, sx + 80),
       });
     }
     for (let i = 0; i < foxCount; i += 1) {
-      const fx = 280 + (i + 1) * ((worldWidth - 380) / (foxCount + 1)) + rand(-30, 30);
-      const fy = groundY - 40 - rand(0, 20);
+      const fx = 300 + (i + 1) * ((worldWidth - 420) / (foxCount + 1));
+      const fy = groundY - 30;
       spawnLevelFox(fx, fy, "left");
     }
   }
