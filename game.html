@@ -37,13 +37,47 @@
         <p>Бонусы: <strong>ракета</strong> — 6 с, <strong>щит</strong> — 19 с, <strong>лазеры из ушей</strong> — 15 с уничтожения врагов</p>
         <p><kbd>M</kbd> — музыка вкл/выкл</p>
       </div>
-      <button id="start-btn">Играть</button>
+      <p class="player-name-line">Игрок: <span id="player-name-display">—</span></p>
+      <div class="btn-row">
+        <button id="start-btn">Играть</button>
+        <button id="leaderboard-btn" class="btn-secondary" type="button">🏆 Рекорды</button>
+      </div>
     </div>
     <div id="gameover" class="hidden">
       <h2>Упала!</h2>
       <p>Сено: <span id="final-score">0</span></p>
       <p>Высота: <span id="final-height">0</span></p>
-      <button id="restart-btn">Ещё раз</button>
+      <p id="final-rank-line" class="final-rank hidden"></p>
+      <div class="btn-row">
+        <button id="restart-btn">Ещё раз</button>
+        <button id="leaderboard-btn-2" class="btn-secondary" type="button">🏆 Рекорды</button>
+      </div>
+    </div>
+    <div id="leaderboard" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="lb-title">
+      <div class="modal-card">
+        <h2 id="lb-title">🏆 Таблица рекордов</h2>
+        <table class="leaderboard-table">
+          <thead>
+            <tr><th>#</th><th>Имя</th><th>Сено</th><th>Высота</th></tr>
+          </thead>
+          <tbody id="leaderboard-body"></tbody>
+        </table>
+        <div class="btn-row">
+          <button id="leaderboard-close" type="button">Закрыть</button>
+          <button id="leaderboard-rename" class="btn-secondary" type="button">Сменить имя</button>
+        </div>
+      </div>
+    </div>
+    <div id="name-prompt" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="np-title">
+      <div class="modal-card">
+        <h2 id="np-title">Как тебя зовут?</h2>
+        <p class="subtitle">Имя появится в таблице рекордов.</p>
+        <input id="name-input" type="text" maxlength="16" autocomplete="off" spellcheck="false" placeholder="Например, Айлана">
+        <div class="btn-row">
+          <button id="name-submit" type="button">Сохранить</button>
+          <button id="name-cancel" class="btn-secondary" type="button">Отмена</button>
+        </div>
+      </div>
     </div>
     <div id="mobile-controls" class="mobile-controls" aria-hidden="true">
       <button type="button" class="ctrl-btn ctrl-jump" id="ctrl-jump" aria-label="Прыжок">↑</button>

@@ -95,8 +95,12 @@ forest 790 → sky 10 → space 200 → alien 780 → sky 10 → space 200 → f
 - Web Audio: pads (triangle) + бас + хэт + снейр + кик + лид. Прогрессия из 4 аккордов.
 - Громкость `MUSIC_VOLUME = 0.045`. Запуск — по первому клику/нажатию/тапу.
 
-### Рекорд
-- Сохраняется в `localStorage["chinchilla-best"]`.
+### Рекорд и таблица рекордов
+- **Best score** (общий рекорд в HUD) — `localStorage["chinchilla-best"]` (просто число).
+- **Имя игрока** — `localStorage["chinchilla-player-name"]` (до 16 символов). Спрашивается через модальное окно `#name-prompt` при первом нажатии «Играть».
+- **Таблица рекордов** — `localStorage["chinchilla-leaderboard"]` (JSON), топ-10 объектов вида `{ name, score, height, date }`. Сортировка: `score desc → height desc → date asc`. Рендерится в модал `#leaderboard` через `renderLeaderboard()` с HTML-эскейпом имён (`escapeHtml`).
+- **Кнопки «🏆 Рекорды»** есть в стартовом меню и на экране проигрыша. Внутри таблицы — «Закрыть» и «Сменить имя».
+- На экране проигрыша показывается строка «Место в таблице: N из M».
 
 ---
 
@@ -112,7 +116,7 @@ forest 790 → sky 10 → space 200 → alien 780 → sky 10 → space 200 → f
 6. **Hazards (607–798):** `ensureHazards`, `updateSaws`, `updateFoxes`, `updateSquirrels`, `updateKnives`.
 7. **Physics (800–943):** `updatePlatforms`, `updatePlayer` (коллизии, камера, падение).
 8. **Items (945–986):** `updateHays`, `updateParticles`, `updateBackgroundLeaves`, `updateHud`.
-9. **State / music (988–1244):** `endGame`, `startMusic`, `toggleMusic`, `setPlayingUi`, `startGame`.
+9. **State / music / leaderboard (988–~1400):** `endGame`, лидерборд (`LEADERBOARD_KEY`, `getPlayerName`, `setPlayerNameValue`, `getLeaderboard`, `saveScore`, `renderLeaderboard`, `showLeaderboard`, `hideLeaderboard`, `showNamePrompt`), `startMusic`, `toggleMusic`, `setPlayingUi`, `startGame`/`actuallyStartGame`.
 10. **Rendering BG (1246–1554):** темы (`drawForestBg`, `drawSkyBg`, `drawSpaceBg`, `drawAlienBg`), деревья, листья.
 11. **Render entities (1555–3733):** `drawPlatforms`, `drawHay`, `drawChinchilla` (~250 строк sprite), `drawApples`, `drawRockets`, `drawShields`, `drawLasers`, `drawSaws`, `drawFoxes`, `drawSquirrels`, `drawKnives`, `drawLives`, `drawPowerupTimers`.
 12. **Damage / rescue (2245–2376):** `damagePlayer`, `rescueWithShield`, `spawnShieldHit`, `spawnRocketTrail`.

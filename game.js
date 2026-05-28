@@ -995,8 +995,138 @@
     bestEl.textContent = bestScore;
     finalScoreEl.textContent = score;
     finalHeightEl.textContent = maxHeight;
+
+    const playerName = getPlayerName() || "Аноним";
+    const updatedBoard = saveScore(playerName, score, maxHeight);
+    const rankLine = document.getElementById("final-rank-line");
+    if (rankLine) {
+      const myEntries = updatedBoard
+        .map((e, i) => ({ e, i }))
+        .filter((x) => x.e.name === playerName && x.e.score === score && x.e.height === maxHeight);
+      if (myEntries.length > 0) {
+        const place = myEntries[myEntries.length - 1].i + 1;
+        rankLine.textContent = `Место в таблице: ${place} из ${updatedBoard.length}`;
+        rankLine.classList.remove("hidden");
+      } else {
+        rankLine.classList.add("hidden");
+      }
+    }
+
     gameoverEl.classList.remove("hidden");
     gameoverEl.classList.add("visible");
+  }
+
+  const LEADERBOARD_KEY = "chinchilla-leaderboard";
+  const PLAYER_NAME_KEY = "chinchilla-player-name";
+  const MAX_LEADERBOARD = 10;
+
+  function getPlayerName() {
+    try { return (localStorage.getItem(PLAYER_NAME_KEY) || "").trim(); }
+    catch (e) { return ""; }
+  }
+
+  function setPlayerNameValue(name) {
+    const cleaned = String(name || "").trim().slice(0, 16);
+    if (cleaned) {
+      try { localStorage.setItem(PLAYER_NAME_KEY, cleaned); } catch (e) {}
+    }
+    refreshPlayerNameDisplay();
+    return cleaned;
+  }
+
+  function refreshPlayerNameDisplay() {
+    const el = document.getElementById("player-name-display");
+    if (el) el.textContent = getPlayerName() || "—";
+  }
+
+  function getLeaderboard() {
+    try {
+      const raw = localStorage.getItem(LEADERBOARD_KEY);
+      if (!raw) return [];
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return [];
+      return arr.filter((e) => e && typeof e.score === "number");
+    } catch (e) { return []; }
+  }
+
+  function saveScore(name, sc, ht) {
+    const entry = {
+      name: String(name || "Аноним").slice(0, 16),
+      score: sc | 0,
+      height: ht | 0,
+      date: Date.now(),
+    };
+    const list = getLeaderboard();
+    list.push(entry);
+    list.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      if (b.height !== a.height) return b.height - a.height;
+      return a.date - b.date;
+    });
+    const top = list.slice(0, MAX_LEADERBOARD);
+    try { localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(top)); } catch (e) {}
+    return top;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
+    });
+  }
+
+  function renderLeaderboard() {
+    const tbody = document.getElementById("leaderboard-body");
+    if (!tbody) return;
+    const list = getLeaderboard();
+    if (list.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" class="lb-empty">Пока пусто — сыграй первую партию!</td></tr>';
+      return;
+    }
+    tbody.innerHTML = list.map(function (e, i) {
+      return "<tr><td>" + (i + 1) + "</td><td>" + escapeHtml(e.name) + "</td><td>" + e.score + "</td><td>" + e.height + "</td></tr>";
+    }).join("");
+  }
+
+  function showLeaderboard() {
+    renderLeaderboard();
+    const m = document.getElementById("leaderboard");
+    if (m) m.classList.remove("hidden");
+  }
+
+  function hideLeaderboard() {
+    const m = document.getElementById("leaderboard");
+    if (m) m.classList.add("hidden");
+  }
+
+  function showNamePrompt(onClose) {
+    const modal = document.getElementById("name-prompt");
+    const input = document.getElementById("name-input");
+    const submit = document.getElementById("name-submit");
+    const cancel = document.getElementById("name-cancel");
+    if (!modal || !input || !submit) return;
+    input.value = getPlayerName();
+    modal.classList.remove("hidden");
+    setTimeout(function () { try { input.focus(); input.select(); } catch (e) {} }, 30);
+
+    const finish = function (saved) {
+      modal.classList.add("hidden");
+      cleanup();
+      if (typeof onClose === "function") onClose(saved ? getPlayerName() : null);
+    };
+    const doSubmit = function () { setPlayerNameValue(input.value); finish(true); };
+    const doCancel = function () { finish(false); };
+    const onKey = function (e) {
+      if (e.key === "Enter") { e.preventDefault(); doSubmit(); }
+      else if (e.key === "Escape") { e.preventDefault(); doCancel(); }
+    };
+    function cleanup() {
+      submit.removeEventListener("click", doSubmit);
+      if (cancel) cancel.removeEventListener("click", doCancel);
+      input.removeEventListener("keydown", onKey);
+    }
+    submit.addEventListener("click", doSubmit);
+    if (cancel) cancel.addEventListener("click", doCancel);
+    input.addEventListener("keydown", onKey);
   }
 
   let musicStarted = false;
@@ -1233,6 +1363,16 @@
   }
 
   function startGame() {
+    if (!getPlayerName()) {
+      showNamePrompt(function (savedName) {
+        if (savedName) actuallyStartGame();
+      });
+      return;
+    }
+    actuallyStartGame();
+  }
+
+  function actuallyStartGame() {
     resetGame();
     state = "playing";
     overlay.classList.remove("visible");
@@ -3779,7 +3919,21 @@
     requestAnimationFrame(loop);
   }
 
+  function isModalOpen() {
+    const lb = document.getElementById("leaderboard");
+    const np = document.getElementById("name-prompt");
+    return (lb && !lb.classList.contains("hidden")) || (np && !np.classList.contains("hidden"));
+  }
+
+  function isTextInputFocused() {
+    const el = document.activeElement;
+    if (!el) return false;
+    const tag = (el.tagName || "").toLowerCase();
+    return tag === "input" || tag === "textarea" || el.isContentEditable;
+  }
+
   window.addEventListener("keydown", (e) => {
+    if (isTextInputFocused() || isModalOpen()) return;
     keys.add(e.key);
     if (e.key === " " || e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
       e.preventDefault();
@@ -3853,6 +4007,22 @@
 
   document.getElementById("start-btn").addEventListener("click", startGame);
   document.getElementById("restart-btn").addEventListener("click", startGame);
+
+  const lbBtn = document.getElementById("leaderboard-btn");
+  const lbBtn2 = document.getElementById("leaderboard-btn-2");
+  const lbClose = document.getElementById("leaderboard-close");
+  const lbRename = document.getElementById("leaderboard-rename");
+  if (lbBtn) lbBtn.addEventListener("click", showLeaderboard);
+  if (lbBtn2) lbBtn2.addEventListener("click", showLeaderboard);
+  if (lbClose) lbClose.addEventListener("click", hideLeaderboard);
+  if (lbRename) lbRename.addEventListener("click", function () {
+    hideLeaderboard();
+    showNamePrompt(function () { showLeaderboard(); });
+  });
+  document.getElementById("leaderboard").addEventListener("click", function (e) {
+    if (e.target.id === "leaderboard") hideLeaderboard();
+  });
+  refreshPlayerNameDisplay();
 
   resetGame();
   loop();
