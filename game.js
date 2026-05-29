@@ -1402,6 +1402,21 @@
     for (const fox of foxes) {
       fox.life -= 1;
       fox.throwTimer -= 1;
+
+      if (gameMode === "levels" && !fox.dead) {
+        const dxp = player.x - fox.x;
+        const dyp = player.y - (fox.y - 14);
+        if (Math.hypot(dxp, dyp) < 28 + player.w * 0.35) {
+          fox.dead = true;
+          spawnFurBurst(fox.x, fox.y - 14);
+          spawnSparkles(fox.x, fox.y - 14);
+          score += 20;
+          if (player.vy > 0) player.vy = JUMP_FORCE * 0.7;
+          playSnort(1.5, 0.25);
+          continue;
+        }
+      }
+
       if (fox.throwTimer <= 0 && fox.life > 60) {
         let tx = player.x;
         let ty = player.y;
@@ -1437,6 +1452,7 @@
         fox.throwTimer = baseDelay * multiplier;
       }
     }
+    foxes = foxes.filter((f) => !f.dead);
   }
 
   function updateSquirrels() {
