@@ -269,6 +269,28 @@
     });
   }
 
+  function addAppleToPlatform(platform) {
+    apples.push({
+      platform,
+      offsetX: rand(-platform.w * 0.2, platform.w * 0.2),
+      offsetY: -22,
+      collected: false,
+      bob: rand(0, Math.PI * 2),
+      r: 11,
+    });
+  }
+
+  function sprinkleApples(midPlatforms, levelNum) {
+    if (midPlatforms.length === 0) return;
+    const cleared = Math.max(0, levelProgress - 1);
+    const desired = Math.min(midPlatforms.length, Math.floor(cleared / 2) + Math.floor(levelNum / 3));
+    if (desired <= 0) return;
+    const shuffled = midPlatforms.slice().sort(() => Math.random() - 0.5);
+    for (let i = 0; i < desired && i < shuffled.length; i += 1) {
+      addAppleToPlatform(shuffled[i]);
+    }
+  }
+
   function addSquirrelToPlatform(platform) {
     squirrels.push({
       platform,
@@ -349,6 +371,7 @@
     for (let i = 0; i < squirrelCount && i < shuffled.length; i += 1) {
       addSquirrelToPlatform(shuffled[i]);
     }
+    sprinkleApples(midPlatforms, levelNum);
     const sawSpan = startY - portalY;
     for (let i = 0; i < sawCount; i += 1) {
       const sawY = startY - (i + 1.5) * (sawSpan / (sawCount + 2));
@@ -410,6 +433,7 @@
     for (let i = 0; i < squirrelCount && i < shuffled.length; i += 1) {
       addSquirrelToPlatform(shuffled[i]);
     }
+    sprinkleApples(midPlatforms, levelNum);
     const safeStartX = 240;
     const safeEndX = worldWidth - 160;
     for (let i = 0; i < sawCount; i += 1) {
