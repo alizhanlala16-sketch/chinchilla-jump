@@ -472,6 +472,8 @@
     saws = [];
     foxes = [];
     knives = [];
+    cannons = [];
+    cannonballs = [];
     squirrels = [];
     apples = [];
     rockets = [];
@@ -790,8 +792,11 @@
   let saws = [];
   let foxes = [];
   let knives = [];
+  let cannons = [];
+  let cannonballs = [];
   let lastSawSpawn = 0;
   let lastFoxSpawn = 0;
+  let lastCannonSpawn = 0;
   let squirrels = [];
   let apples = [];
   let rockets = [];
@@ -973,8 +978,11 @@
     saws = [];
     foxes = [];
     knives = [];
+    cannons = [];
+    cannonballs = [];
     lastSawSpawn = INITIAL_Y;
     lastFoxSpawn = INITIAL_Y;
+    lastCannonSpawn = INITIAL_Y;
     squirrels = [];
     apples = [];
     rockets = [];
@@ -1358,8 +1366,30 @@
       }
     }
 
+    if (maxHeight >= 1000 && highestPlatformY < lastCannonSpawn - 1300) {
+      lastCannonSpawn = highestPlatformY;
+      if (Math.random() < 0.45) {
+        const cannonY = highestPlatformY + 320;
+        const side = Math.random() < 0.5 ? "left" : "right";
+        cannons.push({
+          x: side === "left" ? 26 : W - 26,
+          y: cannonY,
+          side,
+          shootTimer: 150 + Math.random() * 90,
+          life: 720,
+          aimAngle: 0,
+        });
+      }
+    }
+
     saws = saws.filter((s) => !s.dead && s.y < cameraY + H + 200);
     foxes = foxes.filter((f) => f.y < cameraY + H + 200 && f.life > 0);
+    cannons = cannons.filter((c) => !c.dead && c.y < cameraY + H + 200 && c.life > 0);
+    cannonballs = cannonballs.filter((b) =>
+      !b.dead &&
+      b.x > -40 && b.x < W + 40 &&
+      b.y - cameraY > -40 && b.y - cameraY < H + 40
+    );
     knives = knives.filter((k) =>
       k.x > -30 && k.x < W + 30 &&
       k.y - cameraY > -30 && k.y - cameraY < H + 30
@@ -1453,6 +1483,56 @@
       }
     }
     foxes = foxes.filter((f) => !f.dead);
+  }
+
+  function updateCannons() {
+    for (const c of cannons) {
+      if (c.dead) continue;
+      c.life -= 1;
+      const targetAngle = Math.atan2(player.y - c.y, player.x - c.x);
+      const diff = ((targetAngle - c.aimAngle + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+      c.aimAngle += diff * 0.04;
+      c.shootTimer -= 1;
+      if (c.shootTimer <= 0 && c.life > 60) {
+        const speed = 4.6;
+        cannonballs.push({
+          x: c.x + Math.cos(c.aimAngle) * 22,
+          y: c.y + Math.sin(c.aimAngle) * 22,
+          vx: Math.cos(c.aimAngle) * speed,
+          vy: Math.sin(c.aimAngle) * speed,
+          r: 12,
+          spin: 0,
+          dead: false,
+        });
+        spawnSparkles(c.x + Math.cos(c.aimAngle) * 24, c.y + Math.sin(c.aimAngle) * 24);
+        c.shootTimer = 180 + Math.random() * 80;
+        c.recoil = 6;
+      }
+      if (c.recoil) c.recoil *= 0.82;
+    }
+  }
+
+  function updateCannonballs() {
+    for (const b of cannonballs) {
+      if (b.dead) continue;
+      b.x += b.vx;
+      b.y += b.vy;
+      b.spin += 0.18;
+      const dx = player.x - b.x;
+      const dy = player.y - b.y;
+      if (Math.hypot(dx, dy) < b.r + player.w * 0.32) {
+        if (player.shieldTimer > 0 || player.rocketTimer > 0) {
+          spawnShieldHit(b.x, b.y);
+          b.dead = true;
+        } else {
+          spawnSparkles(b.x, b.y);
+          spawnSparkles(player.x, player.y);
+          b.dead = true;
+          player.lives = 0;
+          endGame();
+        }
+      }
+    }
   }
 
   function updateSquirrels() {
@@ -3972,6 +4052,30 @@
         }
       }
     }
+
+    for (const c of cannons) {
+      if (c.dead) continue;
+      for (const b of beams) {
+        if (pointHitsBeam(b, c.x, c.y, 22)) {
+          c.dead = true;
+          spawnLaserBurst(c.x, c.y, "rgba(255,140,80,0.95)");
+          score += 80;
+          updateHud();
+          break;
+        }
+      }
+    }
+
+    for (const cb of cannonballs) {
+      if (cb.dead) continue;
+      for (const b of beams) {
+        if (pointHitsBeam(b, cb.x, cb.y, cb.r)) {
+          cb.dead = true;
+          spawnLaserBurst(cb.x, cb.y, "rgba(255,140,80,0.95)");
+          break;
+        }
+      }
+    }
   }
 
   function drawLasers() {
@@ -4744,6 +4848,65 @@
       ctx.restore();
     }
   }
+  function drawCannons() {
+    for (const c of cannons) {
+      const sy = c.y - cameraY;
+      if (sy < -80 || sy > H + 80) continue;
+      ctx.save();
+      ctx.translate(c.x, sy);
+      ctx.fillStyle = "#2a2a2a";
+      ctx.beginPath();
+      ctx.arc(0, 14, 18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#1a1a1a";
+      ctx.beginPath();
+      ctx.arc(0, 16, 14, 0, Math.PI);
+      ctx.fill();
+      ctx.rotate(c.aimAngle);
+      const recoil = c.recoil || 0;
+      ctx.fillStyle = "#1f1f1f";
+      ctx.fillRect(-recoil, -10, 32 - recoil, 20);
+      ctx.fillStyle = "#3a3a3a";
+      ctx.fillRect(-recoil + 4, -8, 26 - recoil, 4);
+      ctx.fillStyle = "#0a0a0a";
+      ctx.beginPath();
+      ctx.arc(32 - recoil, 0, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#5a3a20";
+      ctx.fillRect(-6, -3, 4, 6);
+      ctx.restore();
+    }
+  }
+
+  function drawCannonballs() {
+    for (const b of cannonballs) {
+      const sy = b.y - cameraY;
+      if (sy < -40 || sy > H + 40) continue;
+      ctx.save();
+      ctx.translate(b.x, sy);
+      const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, b.r * 2);
+      glow.addColorStop(0, "rgba(255,140,40,0.7)");
+      glow.addColorStop(1, "rgba(255,80,20,0)");
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(0, 0, b.r * 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#1a1a1a";
+      ctx.beginPath();
+      ctx.arc(0, 0, b.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#404040";
+      ctx.beginPath();
+      ctx.arc(-b.r * 0.35, -b.r * 0.35, b.r * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#ff7a30";
+      ctx.beginPath();
+      ctx.arc(-Math.cos(b.spin) * b.r * 0.9, -Math.sin(b.spin) * b.r * 0.9, b.r * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
   function drawKnives() {
     for (const k of knives) {
       const sy = k.y - cameraY;
@@ -4830,7 +4993,9 @@
     drawShields();
     drawLasers();
     drawSaws();
+    drawCannons();
     drawKnives();
+    drawCannonballs();
     drawParticles();
     drawPortal();
     drawRocketAura();
@@ -4858,7 +5023,9 @@
     updateLasers();
     updateSaws();
     updateFoxes();
+    updateCannons();
     updateKnives();
+    updateCannonballs();
     updateSquirrels();
     updateParticles();
     if (gameMode === "levels") {
