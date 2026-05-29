@@ -1808,7 +1808,7 @@
 
   const LEADERBOARD_KEY = "chinchilla-leaderboard";
   const PLAYER_NAME_KEY = "chinchilla-player-name";
-  const MAX_LEADERBOARD = 100;
+  const MAX_LEADERBOARD = 5;
   const LEADERBOARD_API = "/api/leaderboard";
 
   let leaderboardCache = [];
@@ -2009,7 +2009,7 @@
       tbody.innerHTML = '<tr><td colspan="4" class="lb-empty">Пока пусто — сыграй первую партию!</td></tr>';
       return;
     }
-    tbody.innerHTML = list.map(function (e, i) {
+    tbody.innerHTML = list.slice(0, MAX_LEADERBOARD).map(function (e, i) {
       return "<tr><td>" + (i + 1) + "</td><td>" + escapeHtml(e.name) + "</td><td>" + e.score + "</td><td>" + e.height + "</td></tr>";
     }).join("");
     setLeaderboardStatus();
