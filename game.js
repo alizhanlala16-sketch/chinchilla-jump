@@ -293,7 +293,7 @@
       x,
       y,
       side,
-      throwTimer: 90 + Math.random() * 60,
+      throwTimer: 180 + Math.random() * 120,
       life: 9999,
       stationary: true,
     });
@@ -1403,7 +1403,8 @@
           vy: (dy / dist) * speed,
           rotation: Math.atan2(dy, dx),
         });
-        fox.throwTimer = 110 + Math.random() * 60;
+        const baseDelay = 110 + Math.random() * 60;
+        fox.throwTimer = fox.stationary ? baseDelay * 2 : baseDelay;
       }
     }
   }
