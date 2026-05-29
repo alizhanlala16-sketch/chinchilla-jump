@@ -362,7 +362,7 @@
     const maxSquirrels = Math.floor(midPlatforms.length * 0.5);
     const squirrelCount = Math.min(maxSquirrels, 1 + Math.floor((levelNum - 1) * 0.5));
     const sawCount = Math.max(0, Math.floor((levelNum - 1) * 0.5));
-    const foxCount = Math.max(0, Math.floor((levelNum - 2) * 0.5));
+    const foxCount = Math.max(0, Math.floor((levelNum - 3) * 0.3));
 
     for (const p of midPlatforms) {
       if (Math.random() < hayChance) addHayToPlatform(p);
@@ -424,7 +424,7 @@
     const maxSquirrels = Math.floor(midPlatforms.length * 0.5);
     const squirrelCount = Math.min(maxSquirrels, 1 + Math.floor((levelNum - 1) * 0.5));
     const sawCount = Math.max(0, Math.floor((levelNum - 1) * 0.5));
-    const foxCount = Math.max(0, Math.floor((levelNum - 2) * 0.6));
+    const foxCount = Math.max(0, Math.floor((levelNum - 3) * 0.35));
 
     for (const p of midPlatforms) {
       if (Math.random() < hayChance) addHayToPlatform(p);
