@@ -283,7 +283,7 @@
   function sprinkleApples(midPlatforms, levelNum) {
     if (midPlatforms.length === 0) return;
     const cleared = Math.max(0, levelProgress - 1);
-    const desired = Math.min(midPlatforms.length, Math.floor(cleared / 2) + Math.floor(levelNum / 3));
+    const desired = Math.min(midPlatforms.length, Math.floor(cleared / 4) + Math.floor(levelNum / 5));
     if (desired <= 0) return;
     const shuffled = midPlatforms.slice().sort(() => Math.random() - 0.5);
     for (let i = 0; i < desired && i < shuffled.length; i += 1) {
