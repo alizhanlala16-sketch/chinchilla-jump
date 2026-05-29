@@ -459,6 +459,9 @@
       platforms.push(perchPlatform);
       const side = i % 2 === 0 ? "left" : "right";
       spawnLevelFox(fx, perchY - 22, side);
+      const lastFox = foxes[foxes.length - 1];
+      lastFox.horizontalLevel = true;
+      lastFox.throwTimer = 360 + Math.random() * 240;
     }
   }
 
@@ -1428,7 +1431,10 @@
           rotation: Math.atan2(dy, dx),
         });
         const baseDelay = 110 + Math.random() * 60;
-        fox.throwTimer = fox.stationary ? baseDelay * 2 : baseDelay;
+        let multiplier = 1;
+        if (fox.horizontalLevel) multiplier = 4;
+        else if (fox.stationary) multiplier = 2;
+        fox.throwTimer = baseDelay * multiplier;
       }
     }
   }
