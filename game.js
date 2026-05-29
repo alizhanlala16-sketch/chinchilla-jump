@@ -428,8 +428,13 @@
     }
     for (let i = 0; i < foxCount; i += 1) {
       const fx = 300 + (i + 1) * ((worldWidth - 420) / (foxCount + 1));
-      const fy = groundY - 30;
-      spawnLevelFox(fx, fy, "left");
+      const perchY = groundY - 150 + rand(-20, 20);
+      const perchW = 70;
+      const perchPlatform = makePlatform(fx - perchW / 2, perchY, perchW, "log");
+      perchPlatform.isFoxPerch = true;
+      platforms.push(perchPlatform);
+      const side = i % 2 === 0 ? "left" : "right";
+      spawnLevelFox(fx, perchY - 22, side);
     }
   }
 
