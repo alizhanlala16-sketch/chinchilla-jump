@@ -660,6 +660,7 @@
   }
 
   function updateBossFox() {
+    if (gameMode !== "levels") return;
     if (!bossFox || bossFox.dead) return;
     if (state !== "playing" || levelTransitionTimer > 0) return;
 
@@ -743,6 +744,7 @@
   }
 
   function drawBossHpBar() {
+    if (gameMode !== "levels") return;
     if (!bossFox || bossFox.dead) return;
     const barW = W * 0.7;
     const barH = 14;
@@ -775,6 +777,7 @@
   }
 
   function drawBossFox() {
+    if (gameMode !== "levels") return;
     if (!bossFox || bossFox.dead) return;
     const sy = bossFox.y - cameraY;
     if (sy < -200 || sy > H + 200) return;
@@ -1255,6 +1258,7 @@
     levelBannerText = "";
     levelTransitionTimer = 0;
     portal = null;
+    bossFox = null;
 
     if (gameMode === "levels") {
       initLevelWorld(levelProgress);
