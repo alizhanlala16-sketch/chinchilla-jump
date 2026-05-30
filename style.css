@@ -157,7 +157,12 @@ body.game-page {
   }
   #overlay .cosmetics-panel {
     margin-bottom: 6px;
-    gap: 8px;
+    gap: 6px 10px;
+    grid-template-columns: 84px 1fr;
+  }
+  #overlay #chinchilla-preview {
+    width: 84px;
+    height: 96px;
   }
   #overlay .overlay-actions .btn-row {
     margin-top: 0;
@@ -321,7 +326,12 @@ body.game-page {
   }
   #overlay .cosmetics-panel {
     margin-bottom: 4px;
-    gap: 6px;
+    gap: 4px 10px;
+    grid-template-columns: 86px 1fr;
+  }
+  #overlay #chinchilla-preview {
+    width: 86px;
+    height: 94px;
   }
   #overlay .cosmetic-label {
     font-size: 12px;
@@ -537,14 +547,32 @@ button:hover {
   width: 100%;
   max-width: 100%;
   margin: 0 0 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  grid-template-rows: auto auto;
+  gap: 8px 12px;
+  align-items: start;
+}
+
+#chinchilla-preview {
+  grid-row: 1 / span 2;
+  grid-column: 1;
+  width: 96px;
+  height: 110px;
+  border-radius: 14px;
+  background:
+    radial-gradient(ellipse at 50% 35%, rgba(255, 220, 150, 0.18), transparent 65%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(255, 200, 120, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 12px rgba(0, 0, 0, 0.25);
+  display: block;
+  align-self: center;
 }
 
 .cosmetic-group {
   text-align: left;
   width: 100%;
+  grid-column: 2;
 }
 
 .cosmetic-label {

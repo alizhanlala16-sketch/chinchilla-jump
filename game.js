@@ -6,6 +6,10 @@
   const W = canvas.width;
   const H = canvas.height;
 
+  const previewCanvas = document.getElementById("chinchilla-preview");
+  const previewCtx = previewCanvas ? previewCanvas.getContext("2d") : null;
+  let previewTimer = 0;
+
   const overlay = document.getElementById("overlay");
   const gameoverEl = document.getElementById("gameover");
   const scoreEl = document.getElementById("score");
@@ -113,6 +117,233 @@
     document.querySelectorAll("#hat-options .cosmetic-btn").forEach(function (btn) {
       btn.classList.toggle("active", btn.dataset.hat === selectedHat);
     });
+    drawCosmeticPreview();
+  }
+
+  function previewLoop() {
+    if (overlay && !overlay.classList.contains("hidden")) {
+      previewTimer += 1;
+      drawCosmeticPreview();
+    }
+    requestAnimationFrame(previewLoop);
+  }
+  if (previewCtx) requestAnimationFrame(previewLoop);
+
+  function drawCosmeticPreview() {
+    if (!previewCtx) return;
+    const pal = getSkinPalette();
+    const c = previewCtx;
+    const pw = previewCanvas.width;
+    const ph = previewCanvas.height;
+    c.clearRect(0, 0, pw, ph);
+
+    const grad = c.createRadialGradient(pw / 2, ph * 0.4, 8, pw / 2, ph * 0.4, pw * 0.7);
+    grad.addColorStop(0, "rgba(255, 220, 150, 0.18)");
+    grad.addColorStop(1, "rgba(255, 220, 150, 0)");
+    c.fillStyle = grad;
+    c.fillRect(0, 0, pw, ph);
+
+    c.save();
+    c.translate(pw / 2, ph * 0.62);
+    c.scale(1.05, 1.05);
+
+    const t = previewTimer;
+    const wobble = Math.sin(t * 0.04) * 0.15;
+    const tailSway = Math.sin(t * 0.06) * 3;
+
+    c.fillStyle = "rgba(0,0,0,0.22)";
+    c.beginPath();
+    c.ellipse(0, 22, 22, 5, 0, 0, Math.PI * 2);
+    c.fill();
+
+    c.fillStyle = pal.tailDark;
+    c.beginPath();
+    c.ellipse(-19, -2 + tailSway, 14, 12, -0.4, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = pal.tailMid;
+    c.beginPath();
+    c.ellipse(-21, -5 + tailSway, 11, 10, -0.5, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = pal.tailTuft;
+    for (let i = 0; i < 9; i += 1) {
+      const a = -1.5 + i * 0.32;
+      const rx = -21 + Math.cos(a) * 12;
+      const ry = -5 + tailSway + Math.sin(a) * 11;
+      c.beginPath();
+      c.arc(rx, ry, 4.8, 0, Math.PI * 2);
+      c.fill();
+    }
+    c.fillStyle = pal.tailTip;
+    c.beginPath();
+    c.ellipse(-28, -9 + tailSway, 6, 5, -0.3, 0, Math.PI * 2);
+    c.fill();
+
+    c.fillStyle = pal.bodyDark;
+    c.beginPath();
+    c.ellipse(0, 12, 19, 15, 0, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = pal.bodyMid;
+    c.beginPath();
+    c.ellipse(0, 9, 17, 14, 0, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = pal.belly;
+    c.beginPath();
+    c.ellipse(0, 13, 12, 10, 0, 0, Math.PI * 2);
+    c.fill();
+
+    c.save();
+    c.translate(-7, -13);
+    c.rotate(-0.35 - wobble * 0.4);
+    c.fillStyle = pal.earL1;
+    c.beginPath();
+    c.ellipse(0, -12, 6, 17, 0, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = pal.earL2;
+    c.beginPath();
+    c.ellipse(0.5, -12, 4, 14, 0, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = pal.earL3;
+    c.beginPath();
+    c.ellipse(0.5, -11, 2.4, 11, 0, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+
+    c.save();
+    c.translate(6, -13);
+    c.rotate(0.2 + wobble * 0.55);
+    c.fillStyle = pal.earR1;
+    c.beginPath();
+    c.ellipse(0, -14, 7, 19, 0, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = pal.earR2;
+    c.beginPath();
+    c.ellipse(-0.5, -14, 5, 16, 0, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = pal.earR3;
+    c.beginPath();
+    c.ellipse(0, -12, 3.8, 14, 0, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = pal.earRInner;
+    c.beginPath();
+    c.ellipse(0.6, -9, 1.6, 9, 0, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+
+    c.fillStyle = pal.headDark;
+    c.beginPath();
+    c.ellipse(0, -1, 15, 14, 0, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = pal.headMid;
+    c.beginPath();
+    c.ellipse(0, -2, 14, 13, 0, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = pal.headLight;
+    c.beginPath();
+    c.ellipse(0, 1, 11, 10, 0, 0, Math.PI * 2);
+    c.fill();
+
+    c.fillStyle = pal.cheekOuter;
+    c.beginPath();
+    c.arc(-13, 2, 4.5, 0, Math.PI * 2);
+    c.arc(13, 2, 4.5, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = pal.cheekInner;
+    c.beginPath();
+    c.arc(-12, 1, 2.8, 0, Math.PI * 2);
+    c.arc(12, 1, 2.8, 0, Math.PI * 2);
+    c.fill();
+
+    c.fillStyle = pal.muzzle;
+    c.beginPath();
+    c.ellipse(0, 5, 7, 4.5, 0, 0, Math.PI * 2);
+    c.fill();
+
+    c.fillStyle = "#000";
+    c.beginPath();
+    c.ellipse(6, -2, 3, 4.2, 0, 0, Math.PI * 2);
+    c.ellipse(-6, -2, 3, 4.2, 0, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = "#fff";
+    c.beginPath();
+    c.arc(6.9, -3.2, 1.1, 0, Math.PI * 2);
+    c.arc(-5.1, -3.2, 1.1, 0, Math.PI * 2);
+    c.fill();
+
+    c.fillStyle = "#d06868";
+    c.beginPath();
+    c.moveTo(0, 3); c.lineTo(-1.8, 5); c.lineTo(1.8, 5); c.closePath();
+    c.fill();
+
+    c.fillStyle = pal.blush;
+    c.beginPath();
+    c.ellipse(9, 4, 2.8, 1.6, 0, 0, Math.PI * 2);
+    c.ellipse(-9, 4, 2.8, 1.6, 0, 0, Math.PI * 2);
+    c.fill();
+
+    if (selectedHat !== "none") drawHatWithCtx(c, selectedHat);
+
+    c.restore();
+  }
+
+  function drawHatWithCtx(c, kind) {
+    c.save();
+    if (kind === "gentleman") {
+      c.fillStyle = "#141414";
+      c.beginPath();
+      c.ellipse(0, -17, 19, 4.2, 0, 0, Math.PI * 2);
+      c.fill();
+      c.fillStyle = "#0a0a0a";
+      c.fillRect(-10, -36, 20, 20);
+      c.fillStyle = "#161616";
+      c.fillRect(-8, -34, 16, 17);
+      c.fillStyle = "#7a1515";
+      c.fillRect(-9, -22, 18, 3.2);
+      c.fillStyle = "#a82020";
+      c.fillRect(-8, -21.5, 16, 1.2);
+      c.fillStyle = "rgba(255,255,255,0.12)";
+      c.fillRect(-7, -33, 2.5, 14);
+    } else if (kind === "bear") {
+      c.fillStyle = "rgba(0,0,0,0.18)";
+      c.beginPath();
+      c.ellipse(0, -10.5, 13, 2.4, 0, 0, Math.PI * 2);
+      c.fill();
+      c.fillStyle = "#5a3a1c";
+      c.beginPath();
+      c.ellipse(0, -14, 12, 7, 0, 0, Math.PI * 2);
+      c.fill();
+      c.fillStyle = "#7a5028";
+      c.beginPath();
+      c.ellipse(-2, -15, 7, 4, -0.25, 0, Math.PI * 2);
+      c.fill();
+      c.fillStyle = "#3a2210";
+      c.fillRect(-12, -12, 24, 2.2);
+      c.fillStyle = "#8a6038";
+      c.fillRect(-12, -12, 24, 0.8);
+      c.fillStyle = "#3a2210";
+      c.beginPath();
+      c.arc(-7, -17.5, 3.6, 0, Math.PI * 2);
+      c.arc(7, -17.5, 3.6, 0, Math.PI * 2);
+      c.fill();
+      c.fillStyle = "#5a3a1c";
+      c.beginPath();
+      c.arc(-7, -17.5, 2.6, 0, Math.PI * 2);
+      c.arc(7, -17.5, 2.6, 0, Math.PI * 2);
+      c.fill();
+      c.fillStyle = "#d8a884";
+      c.beginPath();
+      c.arc(-7, -17.2, 1.3, 0, Math.PI * 2);
+      c.arc(7, -17.2, 1.3, 0, Math.PI * 2);
+      c.fill();
+      c.fillStyle = "#7a5028";
+      c.beginPath();
+      c.arc(0, -18.5, 1.6, 0, Math.PI * 2);
+      c.fill();
+      c.fillStyle = "#d8a884";
+      c.beginPath();
+      c.arc(0.4, -19, 0.9, 0, Math.PI * 2);
+      c.fill();
+    }
+    c.restore();
   }
 
   function bindCosmeticButtons() {
