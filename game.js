@@ -1496,17 +1496,17 @@
       if (c.shootTimer <= 0 && c.life > 60) {
         const speed = 4.6;
         cannonballs.push({
-          x: c.x + Math.cos(c.aimAngle) * 22,
-          y: c.y + Math.sin(c.aimAngle) * 22,
+          x: c.x + Math.cos(c.aimAngle) * 50,
+          y: c.y + Math.sin(c.aimAngle) * 50,
           vx: Math.cos(c.aimAngle) * speed,
           vy: Math.sin(c.aimAngle) * speed,
-          r: 12,
+          r: 16,
           spin: 0,
           dead: false,
         });
-        spawnSparkles(c.x + Math.cos(c.aimAngle) * 24, c.y + Math.sin(c.aimAngle) * 24);
+        spawnSparkles(c.x + Math.cos(c.aimAngle) * 52, c.y + Math.sin(c.aimAngle) * 52);
         c.shootTimer = 180 + Math.random() * 80;
-        c.recoil = 6;
+        c.recoil = 10;
       }
       if (c.recoil) c.recoil *= 0.82;
     }
@@ -4056,7 +4056,7 @@
     for (const c of cannons) {
       if (c.dead) continue;
       for (const b of beams) {
-        if (pointHitsBeam(b, c.x, c.y, 22)) {
+        if (pointHitsBeam(b, c.x, c.y, 34)) {
           c.dead = true;
           spawnLaserBurst(c.x, c.y, "rgba(255,140,80,0.95)");
           score += 80;
@@ -4851,29 +4851,136 @@
   function drawCannons() {
     for (const c of cannons) {
       const sy = c.y - cameraY;
-      if (sy < -80 || sy > H + 80) continue;
+      if (sy < -120 || sy > H + 120) continue;
       ctx.save();
       ctx.translate(c.x, sy);
-      ctx.fillStyle = "#2a2a2a";
+
+      ctx.fillStyle = "rgba(0,0,0,0.35)";
       ctx.beginPath();
-      ctx.arc(0, 14, 18, 0, Math.PI * 2);
+      ctx.ellipse(0, 30, 34, 6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = "#1a1a1a";
+
+      ctx.fillStyle = "#5a3a1c";
       ctx.beginPath();
-      ctx.arc(0, 16, 14, 0, Math.PI);
+      ctx.moveTo(-26, 30);
+      ctx.lineTo(26, 30);
+      ctx.lineTo(22, 8);
+      ctx.lineTo(-22, 8);
+      ctx.closePath();
       ctx.fill();
+      ctx.fillStyle = "#3e260f";
+      ctx.fillRect(-24, 8, 48, 4);
+      ctx.fillStyle = "#7a4e28";
+      ctx.fillRect(-22, 10, 44, 2);
+
+      ctx.fillStyle = "#3a2412";
+      ctx.fillRect(-20, 13, 3, 14);
+      ctx.fillRect(17, 13, 3, 14);
+
+      for (let i = -16; i <= 16; i += 16) {
+        ctx.fillStyle = "#1a1a1a";
+        ctx.beginPath();
+        ctx.arc(i, 30, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#3a2818";
+        ctx.beginPath();
+        ctx.arc(i, 30, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#1a1208";
+        ctx.lineWidth = 1.2;
+        for (let s = 0; s < 6; s += 1) {
+          const a = s * (Math.PI / 3);
+          ctx.beginPath();
+          ctx.moveTo(i, 30);
+          ctx.lineTo(i + Math.cos(a) * 7, 30 + Math.sin(a) * 7);
+          ctx.stroke();
+        }
+        ctx.fillStyle = "#c9a060";
+        ctx.beginPath();
+        ctx.arc(i, 30, 1.6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
       ctx.rotate(c.aimAngle);
       const recoil = c.recoil || 0;
-      ctx.fillStyle = "#1f1f1f";
-      ctx.fillRect(-recoil, -10, 32 - recoil, 20);
-      ctx.fillStyle = "#3a3a3a";
-      ctx.fillRect(-recoil + 4, -8, 26 - recoil, 4);
-      ctx.fillStyle = "#0a0a0a";
+
+      ctx.fillStyle = "rgba(0,0,0,0.25)";
       ctx.beginPath();
-      ctx.arc(32 - recoil, 0, 7, 0, Math.PI * 2);
+      ctx.ellipse(20 - recoil, 6, 28, 6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = "#5a3a20";
-      ctx.fillRect(-6, -3, 4, 6);
+
+      const barrelGrad = ctx.createLinearGradient(0, -16, 0, 16);
+      barrelGrad.addColorStop(0, "#3a3a40");
+      barrelGrad.addColorStop(0.5, "#1a1a1e");
+      barrelGrad.addColorStop(1, "#0a0a0c");
+      ctx.fillStyle = barrelGrad;
+      ctx.beginPath();
+      ctx.moveTo(-12 - recoil, -16);
+      ctx.lineTo(46 - recoil, -14);
+      ctx.lineTo(46 - recoil, 14);
+      ctx.lineTo(-12 - recoil, 16);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(255,255,255,0.18)";
+      ctx.fillRect(-12 - recoil, -14, 58, 3);
+      ctx.fillStyle = "rgba(0,0,0,0.35)";
+      ctx.fillRect(-12 - recoil, 11, 58, 3);
+
+      ctx.fillStyle = "#2a2a30";
+      ctx.fillRect(-2 - recoil, -17, 5, 34);
+      ctx.fillRect(18 - recoil, -16, 5, 32);
+      ctx.fillRect(38 - recoil, -15, 5, 30);
+      ctx.fillStyle = "rgba(255,255,255,0.25)";
+      ctx.fillRect(-2 - recoil, -17, 5, 1.5);
+      ctx.fillRect(18 - recoil, -16, 5, 1.5);
+      ctx.fillRect(38 - recoil, -15, 5, 1.5);
+
+      ctx.fillStyle = "#7a6028";
+      for (let r = 0; r < 3; r += 1) {
+        ctx.beginPath();
+        ctx.arc(8 - recoil + r * 14, -10, 1.4, 0, Math.PI * 2);
+        ctx.arc(8 - recoil + r * 14, 10, 1.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.fillStyle = "#2a1a0a";
+      ctx.beginPath();
+      ctx.ellipse(-14 - recoil, 0, 4, 14, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#4a3a18";
+      ctx.beginPath();
+      ctx.ellipse(-12 - recoil, 0, 2, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#0a0a0c";
+      ctx.beginPath();
+      ctx.arc(48 - recoil, 0, 12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#1a1a20";
+      ctx.beginPath();
+      ctx.arc(48 - recoil, 0, 10, 0, Math.PI * 2);
+      ctx.fill();
+      const muzzleGrad = ctx.createRadialGradient(48 - recoil, 0, 1, 48 - recoil, 0, 8);
+      muzzleGrad.addColorStop(0, "#000");
+      muzzleGrad.addColorStop(1, "#1a1a20");
+      ctx.fillStyle = muzzleGrad;
+      ctx.beginPath();
+      ctx.arc(48 - recoil, 0, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (recoil > 1.5) {
+        ctx.fillStyle = "rgba(255,180,80," + (recoil / 6).toFixed(2) + ")";
+        ctx.beginPath();
+        ctx.arc(54 - recoil, 0, 9, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.fillStyle = "#3a2412";
+      ctx.fillRect(-8, -3, 6, 6);
+      ctx.fillStyle = "#6a4828";
+      ctx.fillRect(-8, -3, 6, 2);
+
       ctx.restore();
     }
   }
@@ -4884,25 +4991,39 @@
       if (sy < -40 || sy > H + 40) continue;
       ctx.save();
       ctx.translate(b.x, sy);
-      const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, b.r * 2);
-      glow.addColorStop(0, "rgba(255,140,40,0.7)");
-      glow.addColorStop(1, "rgba(255,80,20,0)");
+
+      const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, b.r * 2.4);
+      glow.addColorStop(0, "rgba(255,160,60,0.8)");
+      glow.addColorStop(0.5, "rgba(255,100,30,0.35)");
+      glow.addColorStop(1, "rgba(255,60,20,0)");
       ctx.fillStyle = glow;
       ctx.beginPath();
-      ctx.arc(0, 0, b.r * 2, 0, Math.PI * 2);
+      ctx.arc(0, 0, b.r * 2.4, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = "#1a1a1a";
+
+      const ballGrad = ctx.createRadialGradient(-b.r * 0.4, -b.r * 0.4, 1, 0, 0, b.r);
+      ballGrad.addColorStop(0, "#5a5a60");
+      ballGrad.addColorStop(0.5, "#2a2a30");
+      ballGrad.addColorStop(1, "#08080a");
+      ctx.fillStyle = ballGrad;
       ctx.beginPath();
       ctx.arc(0, 0, b.r, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = "#404040";
+
+      ctx.fillStyle = "rgba(255,255,255,0.35)";
       ctx.beginPath();
-      ctx.arc(-b.r * 0.35, -b.r * 0.35, b.r * 0.4, 0, Math.PI * 2);
+      ctx.arc(-b.r * 0.4, -b.r * 0.4, b.r * 0.3, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = "#ff7a30";
+
+      ctx.fillStyle = "#ffd060";
       ctx.beginPath();
-      ctx.arc(-Math.cos(b.spin) * b.r * 0.9, -Math.sin(b.spin) * b.r * 0.9, b.r * 0.3, 0, Math.PI * 2);
+      ctx.arc(-Math.cos(b.spin) * b.r * 0.95, -Math.sin(b.spin) * b.r * 0.95, b.r * 0.32, 0, Math.PI * 2);
       ctx.fill();
+      ctx.fillStyle = "#ff7a20";
+      ctx.beginPath();
+      ctx.arc(-Math.cos(b.spin + 0.4) * b.r * 1.1, -Math.sin(b.spin + 0.4) * b.r * 1.1, b.r * 0.22, 0, Math.PI * 2);
+      ctx.fill();
+
       ctx.restore();
     }
   }
