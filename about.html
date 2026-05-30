@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>О игре — Chinchilla &amp; Jump</title>
-  <meta name="description" content="Описание игры Chinchilla & Jump: персонажи, механики, управление на ПК и телефоне, планы на iOS и Android.">
-  <link rel="stylesheet" href="style.css?v=13">
+  <meta name="description" content="Описание игры Chinchilla & Jump: режимы Аркада и Уровни, портал между уровнями, босс-лиса, пушки, скины и шляпки, глобальная таблица рекордов, управление на ПК и телефоне.">
+  <link rel="stylesheet" href="style.css?v=14">
 </head>
 <body class="about-page">
   <header class="top-bar">
@@ -23,17 +23,35 @@
     <span class="eyebrow">О игре</span>
     <h1>Прыжки сквозь волшебный лес</h1>
     <p class="lead">
-      Chinchilla &amp; Jump — бесплатная браузерная вертикальная аркада в духе Poor Bunny.
-      Помоги пушистой шиншилле взобраться как можно выше, собирая сено и уворачиваясь
-      от лесных опасностей. Играй в браузере на ПК или телефоне — без установки.
+      Chinchilla &amp; Jump — бесплатная браузерная вертикальная аркада в духе Poor Bunny и Doodle Jump.
+      Помоги пушистой шиншилле взобраться как можно выше или дойти до портала, собирая сено
+      и уворачиваясь от лесных опасностей. Играй в браузере на ПК или телефоне — без установки.
     </p>
     <p class="lead" style="margin-top:12px; font-size:15px;">
       Онлайн-версия: <a href="https://chinchilla-jump.vercel.app" style="color:#ffe08a;">chinchilla-jump.vercel.app</a>
     </p>
     <div class="hero-stats">
-      <div class="stat"><span class="stat-num">∞</span><span class="stat-label">уровней</span></div>
+      <div class="stat"><span class="stat-num">2</span><span class="stat-label">режима</span></div>
       <div class="stat"><span class="stat-num">3</span><span class="stat-label">жизни</span></div>
-      <div class="stat"><span class="stat-num">6+</span><span class="stat-label">героев и врагов</span></div>
+      <div class="stat"><span class="stat-num">4</span><span class="stat-label">мира-темы</span></div>
+      <div class="stat"><span class="stat-num">5</span><span class="stat-label">бонусов</span></div>
+      <div class="stat"><span class="stat-num">∞</span><span class="stat-label">подъёма</span></div>
+    </div>
+  </section>
+
+  <section id="modes" class="features">
+    <h2 class="section-title">Два режима</h2>
+    <div class="cards" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+      <article class="card">
+        <div class="card-icon icon-platform"></div>
+        <h3>Аркада</h3>
+        <p>Классика: бесконечный подъём по веткам, темы фона сменяются по высоте — лес, небо, космос, инопланетный мир. Чем выше — тем сложнее: после <strong>1000</strong> метров появляются <strong>пушки</strong>, мгновенно сбивающие шиншиллу. Результат уходит в глобальную таблицу рекордов.</p>
+      </article>
+      <article class="card">
+        <div class="card-icon icon-hay"></div>
+        <h3>Уровни</h3>
+        <p>Беги или прыгай к <strong>порталу</strong> — он перенесёт на следующий уровень. Уровни чередуются: вертикальные (вверх) и горизонтальные (вправо). С каждым уровнем платформ и врагов всё больше. Каждый <strong>50-й</strong> уровень — встреча с <strong>боссом-лисой</strong>. Прогресс сохраняется на устройстве.</p>
+      </article>
     </div>
   </section>
 
@@ -43,37 +61,57 @@
       <article class="card">
         <div class="card-icon icon-chin"></div>
         <h3>Пушистая шиншилла</h3>
-        <p>Главная героиня с длинными ушками, бусинами-глазами и двойным прыжком. При прыжке фыркает.</p>
+        <p>Главная героиня с длинными ушками, бусинами-глазами и двойным прыжком. При прыжке фыркает. Можно выбрать <strong>скин</strong> (серый, белый, чёрный) и <strong>шляпку</strong> (без шляпы, цилиндр джентльмена, шапка-мишка) — превью прямо в меню.</p>
       </article>
       <article class="card">
         <div class="card-icon icon-hay"></div>
         <h3>Сено и яблоки</h3>
-        <p>Собирай снопы сена ради очков и редкие яблоки, восстанавливающие жизни.</p>
+        <p>Собирай снопы сена ради очков (+10) и редкие яблоки 🍎 — каждое восстанавливает жизнь.</p>
       </article>
       <article class="card">
         <div class="card-icon icon-fox"></div>
-        <h3>Опасные лисы</h3>
-        <p>Рыжая лиса кидает ножи из норы, белая — ледяные сосульки. Иногда целятся в белок.</p>
+        <h3>Лисы и ножи</h3>
+        <p>Хитрые лисы сидят у краёв и кидают ножи. В режиме <em>Уровни</em> стреляют медленнее, а шиншилла может уничтожить лису, наскочив на неё сверху.</p>
       </article>
       <article class="card">
         <div class="card-icon icon-saw"></div>
         <h3>Пилы у стен</h3>
-        <p>Острые лезвия скачут по краям. Один удар — минус жизнь, но не конец игры.</p>
+        <p>Острые лезвия скачут по краям и в воздухе. Один удар — минус жизнь. Щит и ракета их отбивают, лазер испепеляет.</p>
+      </article>
+      <article class="card">
+        <div class="card-icon icon-saw"></div>
+        <h3>Пушки</h3>
+        <p>Появляются <strong>только в Аркаде</strong> выше 1000 метров. Огромные орудия медленно прицеливаются и выстреливают тяжёлым ядром — <strong>мгновенный конец</strong>, если нет щита.</p>
+      </article>
+      <article class="card">
+        <div class="card-icon icon-fox"></div>
+        <h3>Босс-лиса</h3>
+        <p>Каждый <strong>50-й</strong> уровень. Огромная лиса прицеливается и палит лазером — попадание смертельно. Победа — <strong>3 прыжка</strong> сверху по голове. После победы открывается портал на следующий уровень.</p>
       </article>
       <article class="card">
         <div class="card-icon icon-squirrel"></div>
         <h3>Белки на ветках</h3>
-        <p>Соседи по лесу прыгают между платформами и иногда становятся целью лис.</p>
+        <p>Соседи по лесу прыгают между платформами и иногда становятся целью лис вместо тебя.</p>
       </article>
       <article class="card">
         <div class="card-icon icon-platform"></div>
         <h3>Живые платформы</h3>
-        <p>Бревна, подвижные ветки и хрупкие платформы: трескаются, падают и восстанавливаются через ~5 секунд.</p>
+        <p>Бревна, трава, подвижные ветки и хрупкие платформы: трескаются под лапами, падают и восстанавливаются через ~5 секунд.</p>
       </article>
       <article class="card">
         <div class="card-icon icon-hay"></div>
         <h3>Супер-способности</h3>
-        <p><strong>Ракета</strong> — 6 секунд несёт шиншиллу вверх, пробивая всё на пути. <strong>Щит</strong> — 19 секунд защиты: гасит ножи, отбивает пилы, спасает от падения на третью платформу выше. <strong>Лазеры из ушей</strong> — 15 секунд испепеляют пилы, ножи, лис и белок.</p>
+        <p><strong>Ракета</strong> (6 с) — несёт шиншиллу вверх, пробивая всё. <strong>Щит</strong> (19 с) — гасит ножи, отбивает пилы, спасает от падения на 3-ю платформу выше. <strong>Лазеры из ушей</strong> (15 с) — два луча испепеляют пилы, ножи, лис и пушки.</p>
+      </article>
+      <article class="card">
+        <div class="card-icon icon-platform"></div>
+        <h3>4 темы фона</h3>
+        <p>Лес → небо → космос → инопланетный мир, и снова по кругу. Плавные переходы между мирами по высоте — каждый со своей палитрой и декором.</p>
+      </article>
+      <article class="card">
+        <div class="card-icon icon-hay"></div>
+        <h3>Таблица рекордов</h3>
+        <p>Глобальный топ-<strong>5</strong>: имя, очки, высота. У каждого игрока — только лучший результат. Когда ты бьёшь свой рекорд, старый автоматически заменяется. Если сервер недоступен — работает локально на твоём устройстве.</p>
       </article>
     </div>
   </section>
@@ -83,35 +121,43 @@
     <div class="how-grid">
       <div class="how-item">
         <span class="how-num">01</span>
-        <h4>Двигайся</h4>
-        <p><strong>ПК:</strong> <kbd>←</kbd> <kbd>→</kbd> или <kbd>A</kbd> <kbd>D</kbd>.</p>
-        <p><strong>Телефон:</strong> справа внизу кнопки <strong>←</strong> и <strong>→</strong> — удерживай для движения.</p>
+        <h4>Выбери режим</h4>
+        <p>На старте: <strong>Аркада</strong> — бесконечный подъём в таблицу рекордов, или <strong>Уровни</strong> — добеги до портала и переходи дальше.</p>
       </div>
       <div class="how-item">
         <span class="how-num">02</span>
-        <h4>Прыгай</h4>
-        <p><strong>ПК:</strong> <kbd>Пробел</kbd> / <kbd>↑</kbd> / <kbd>W</kbd>. Второй раз в воздухе — двойной прыжок.</p>
-        <p><strong>Телефон:</strong> слева внизу большая кнопка <strong>↑</strong> — прыжок (можно нажимать в воздухе для двойного).</p>
+        <h4>Настрой вид</h4>
+        <p>Подбери скин и шляпку — превью шиншиллы прямо в меню. Введи имя для таблицы рекордов.</p>
       </div>
       <div class="how-item">
         <span class="how-num">03</span>
-        <h4>Не падай</h4>
-        <p>Падение вниз за экран — мгновенный конец. У лис и пил — 3 жизни с неуязвимостью после удара.</p>
+        <h4>Двигайся</h4>
+        <p><strong>ПК:</strong> <kbd>←</kbd> <kbd>→</kbd> или <kbd>A</kbd> <kbd>D</kbd>.<br><strong>Телефон:</strong> справа внизу кнопки <strong>←</strong> и <strong>→</strong>.</p>
       </div>
       <div class="how-item">
         <span class="how-num">04</span>
-        <h4>Собирай и выживай</h4>
-        <p>Сено — очки, яблоки — лечение, <strong>ракета</strong> — 6 с полёта вверх, <strong>щит</strong> — 19 с защиты с подстраховкой от падения, <strong>лазеры из ушей</strong> — 15 с уничтожения всего на пути. Хрупкие ветки краснеют и трескаются — успей прыгнуть, они вернутся.</p>
+        <h4>Прыгай</h4>
+        <p><strong>ПК:</strong> <kbd>Пробел</kbd> / <kbd>↑</kbd> / <kbd>W</kbd>. Второй раз в воздухе — двойной прыжок.<br><strong>Телефон:</strong> слева внизу большая кнопка <strong>↑</strong>.</p>
       </div>
       <div class="how-item">
         <span class="how-num">05</span>
-        <h4>Звук</h4>
-        <p>Фоновая музыка и звук прыжка. На ПК: <kbd>M</kbd> — включить или выключить музыку.</p>
+        <h4>Не падай</h4>
+        <p>Падение вниз за экран — мгновенный конец (если нет щита). После удара — короткая неуязвимость.</p>
       </div>
       <div class="how-item">
         <span class="how-num">06</span>
+        <h4>Собирай и выживай</h4>
+        <p>Сено — очки, яблоки — жизни. Ракета, щит и ушные лазеры выпадают редко, но решают исход. Хрупкие ветки краснеют — успей прыгнуть.</p>
+      </div>
+      <div class="how-item">
+        <span class="how-num">07</span>
+        <h4>Звук</h4>
+        <p>Фоновая музыка и звук прыжка. На ПК: <kbd>M</kbd> — музыку вкл/выкл.</p>
+      </div>
+      <div class="how-item">
+        <span class="how-num">08</span>
         <h4>Экран</h4>
-        <p>Игра подстраивается под размер экрана телефона или браузера — удобно в портретной ориентации.</p>
+        <p>Игра подстраивается под размер экрана — удобно в портретной ориентации на телефоне и в окне браузера на ПК.</p>
       </div>
     </div>
   </section>
@@ -131,8 +177,13 @@
       </div>
       <div class="future-card">
         <div class="badge">В разработке</div>
-        <h3>Новые миры</h3>
-        <p>Зимний бор, пещеры и небесные ветки — каждый со своими врагами и музыкой.</p>
+        <h3>Новые скины и шляпы</h3>
+        <p>Зимняя шиншилла, корона, новогодний колпачок и больше нарядов в галерее меню.</p>
+      </div>
+      <div class="future-card">
+        <div class="badge">В разработке</div>
+        <h3>Новые боссы</h3>
+        <p>Не только лиса: совы-стрелки, гигантская пила-страж и хозяин космоса — у каждого свои атаки и портал-награда.</p>
       </div>
     </div>
   </section>
@@ -147,7 +198,7 @@
   </section>
 
   <footer class="site-footer">
-    <p>© 2026 Chinchilla &amp; Jump. Сделано с любовью к пушистым.</p>
+    <p>© 2026 Chinchilla &amp; Jump. Сделано с любовью к пушистым — Жалгас Алижан и сестрёнка Айлана.</p>
   </footer>
 </body>
 </html>
