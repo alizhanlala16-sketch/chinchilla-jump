@@ -1,3 +1,12 @@
+if (!process.env.POSTGRES_URL) {
+  const fallback =
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.POSTGRES_URL_NON_POOLING ||
+    process.env.NEON_DATABASE_URL;
+  if (fallback) process.env.POSTGRES_URL = fallback;
+}
+
 const { sql } = require("@vercel/postgres");
 
 const MAX_ROWS = 100;
@@ -62,7 +71,14 @@ module.exports = async function handler(req, res) {
   }
 
   if (!process.env.POSTGRES_URL) {
-    sendJson(res, 503, { error: "database_not_configured" });
+    const available = Object.keys(process.env).filter(function (k) {
+      return /POSTGRES|DATABASE|NEON/i.test(k);
+    });
+    sendJson(res, 503, {
+      error: "database_not_configured",
+      hint: "Set POSTGRES_URL or DATABASE_URL in Vercel project env vars",
+      foundEnvKeys: available,
+    });
     return;
   }
 
