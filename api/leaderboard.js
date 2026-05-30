@@ -87,10 +87,14 @@ module.exports = async function handler(req, res) {
 
     if (req.method === "GET") {
       const { rows } = await sql`
-        SELECT name, score, height,
-          (EXTRACT(EPOCH FROM created_at) * 1000)::bigint AS date
-        FROM scores
-        ORDER BY score DESC, height DESC, created_at ASC
+        SELECT name, score, height, date FROM (
+          SELECT DISTINCT ON (name)
+            name, score, height,
+            (EXTRACT(EPOCH FROM created_at) * 1000)::bigint AS date
+          FROM scores
+          ORDER BY name, score DESC, height DESC, created_at ASC
+        ) AS best
+        ORDER BY score DESC, height DESC, date ASC
         LIMIT ${MAX_ROWS}
       `;
       const { rows: countRows } = await sql`
@@ -118,16 +122,34 @@ module.exports = async function handler(req, res) {
         return;
       }
 
-      await sql`
-        INSERT INTO scores (name, score, height)
-        VALUES (${name}, ${score}, ${height})
+      const { rows: existing } = await sql`
+        SELECT id, score, height FROM scores WHERE name = ${name}
+        ORDER BY score DESC, height DESC, created_at ASC
+        LIMIT 1
       `;
+      const prev = existing[0];
+      const isBetter =
+        !prev ||
+        score > prev.score ||
+        (score === prev.score && height > prev.height);
+
+      if (isBetter) {
+        await sql`DELETE FROM scores WHERE name = ${name}`;
+        await sql`
+          INSERT INTO scores (name, score, height)
+          VALUES (${name}, ${score}, ${height})
+        `;
+      }
 
       const { rows } = await sql`
-        SELECT name, score, height,
-          (EXTRACT(EPOCH FROM created_at) * 1000)::bigint AS date
-        FROM scores
-        ORDER BY score DESC, height DESC, created_at ASC
+        SELECT name, score, height, date FROM (
+          SELECT DISTINCT ON (name)
+            name, score, height,
+            (EXTRACT(EPOCH FROM created_at) * 1000)::bigint AS date
+          FROM scores
+          ORDER BY name, score DESC, height DESC, created_at ASC
+        ) AS best
+        ORDER BY score DESC, height DESC, date ASC
         LIMIT ${MAX_ROWS}
       `;
       const { rows: countRows } = await sql`

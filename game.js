@@ -2557,8 +2557,19 @@
       height: ht | 0,
       date: Date.now(),
     };
-    const list = getLeaderboardLocal();
-    list.push(entry);
+    const list = getLeaderboardLocal().filter(function (e) {
+      if (e.name !== entry.name) return true;
+      if (entry.score > e.score) return false;
+      if (entry.score === e.score && entry.height > e.height) return false;
+      return true;
+    });
+    const hasBetter = list.some(function (e) {
+      return e.name === entry.name && (
+        e.score > entry.score ||
+        (e.score === entry.score && e.height >= entry.height)
+      );
+    });
+    if (!hasBetter) list.push(entry);
     list.sort(function (a, b) {
       if (b.score !== a.score) return b.score - a.score;
       if (b.height !== a.height) return b.height - a.height;
