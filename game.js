@@ -188,6 +188,8 @@
     { orient: "horizontal", label: "Дальняя ветка" },
     { orient: "vertical", label: "К вершине" },
   ];
+  const BOSS_LEVEL_PERIOD = 50;
+  let bossFox = null;
   let cameraY = 0;
   let score = 0;
   let bestScore = Number(localStorage.getItem("chinchilla-best") || 0);
@@ -210,7 +212,12 @@
     try { localStorage.setItem(LEVEL_PROGRESS_KEY, String(levelProgress)); } catch (e) {}
   }
 
+  function isBossLevel(levelNum) {
+    return levelNum % BOSS_LEVEL_PERIOD === 0;
+  }
+
   function getLevelDef(levelNum) {
+    if (isBossLevel(levelNum)) return { orient: "vertical", label: "Босс — лиса с лазерами", boss: true };
     return LEVEL_DEFS[(levelNum - 1) % LEVEL_DEFS.length];
   }
 
@@ -319,6 +326,60 @@
       life: 9999,
       stationary: true,
     });
+  }
+
+  function buildBossLevel(levelNum) {
+    levelOrient = "vertical";
+    cameraX = 0;
+    worldWidth = W;
+    cameraY = 0;
+    const bossIndex = Math.max(1, Math.floor(levelNum / BOSS_LEVEL_PERIOD));
+    const arenaTopY = -H * 1.6;
+    const arenaBottomY = H - 60;
+
+    platforms.push(makePlatform(W / 2 - 90, arenaBottomY, 180, "grass"));
+
+    const platformRows = 9;
+    const rowGap = (arenaBottomY - (arenaTopY + 120)) / (platformRows + 1);
+    let prevCenter = W / 2;
+    for (let i = 1; i <= platformRows; i += 1) {
+      const y = arenaBottomY - i * rowGap;
+      const w = rand(90, 120);
+      const minC = Math.max(w / 2 + 18, prevCenter - 150);
+      const maxC = Math.min(W - w / 2 - 18, prevCenter + 150);
+      const cx = rand(minC, maxC);
+      platforms.push(makePlatform(cx - w / 2, y, w, i % 2 === 0 ? "log" : "grass"));
+      prevCenter = cx;
+    }
+
+    const bossY = arenaTopY + 80;
+    platforms.push(makePlatform(W / 2 - 90, bossY + 40, 180, "log"));
+    bossFox = {
+      x: W / 2,
+      y: bossY,
+      hp: 4 + bossIndex,
+      maxHp: 4 + bossIndex,
+      phase: "idle",
+      phaseTimer: 90,
+      aimAngle: Math.PI / 2,
+      laserAngle: Math.PI / 2,
+      laserPower: 0,
+      shakeT: 0,
+      dead: false,
+      hitFlash: 0,
+      bossIndex,
+    };
+
+    const portalY = arenaTopY + 6;
+    portal = { x: W / 2, y: portalY, r: 38, active: false, spin: 0, pulse: 0, hidden: true };
+
+    player.x = W / 2;
+    player.y = arenaBottomY - 40;
+    player.vx = 0;
+    player.vy = 0;
+    player.grounded = false;
+    player.jumpsLeft = 2;
+    highestPlatformY = portalY;
   }
 
   function buildVerticalLevel(levelNum) {
@@ -480,6 +541,7 @@
     shields = [];
     lasers = [];
     portal = null;
+    bossFox = null;
     levelTransitionTimer = 0;
     player.standingOn = null;
     player.invincibleTimer = 0;
@@ -487,11 +549,13 @@
     player.shieldTimer = 0;
     player.laserTimer = 0;
     const def = getLevelDef(levelNum);
-    if (def.orient === "horizontal") buildHorizontalLevel(levelNum);
+    if (def.boss) buildBossLevel(levelNum);
+    else if (def.orient === "horizontal") buildHorizontalLevel(levelNum);
     else buildVerticalLevel(levelNum);
     fitLevelCamera(def);
-    levelBannerText = "Уровень " + levelNum + " · " + (def.orient === "horizontal" ? "беги вправо к порталу →" : "прыгай вверх к порталу ↑");
-    levelBannerTimer = 130;
+    if (def.boss) levelBannerText = "БОСС! Запрыгни на лису сверху";
+    else levelBannerText = "Уровень " + levelNum + " · " + (def.orient === "horizontal" ? "беги вправо к порталу →" : "прыгай вверх к порталу ↑");
+    levelBannerTimer = 180;
     updateModeHud();
   }
 
@@ -595,8 +659,247 @@
     if (Math.hypot(dx, dy) < portal.r + player.w * 0.28) onPortalReached();
   }
 
+  function updateBossFox() {
+    if (!bossFox || bossFox.dead) return;
+    if (state !== "playing" || levelTransitionTimer > 0) return;
+
+    if (bossFox.hitFlash > 0) bossFox.hitFlash -= 1;
+    bossFox.phaseTimer -= 1;
+
+    const targetAngle = Math.atan2(player.y - bossFox.y, player.x - bossFox.x);
+    if (bossFox.phase === "idle" || bossFox.phase === "aim") {
+      const diff = ((targetAngle - bossFox.aimAngle + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+      bossFox.aimAngle += diff * (bossFox.phase === "aim" ? 0.08 : 0.04);
+    }
+
+    if (bossFox.phase === "idle" && bossFox.phaseTimer <= 0) {
+      bossFox.phase = "aim";
+      bossFox.phaseTimer = 70;
+      bossFox.laserAngle = bossFox.aimAngle;
+    } else if (bossFox.phase === "aim") {
+      bossFox.laserAngle = bossFox.aimAngle;
+      if (bossFox.phaseTimer <= 0) {
+        bossFox.phase = "fire";
+        bossFox.phaseTimer = 45;
+        bossFox.laserPower = 1;
+        bossFox.shakeT = 1;
+        playSnort(0.6, 0.4);
+      }
+    } else if (bossFox.phase === "fire") {
+      bossFox.laserPower = 1;
+      const dx = Math.cos(bossFox.laserAngle);
+      const dy = Math.sin(bossFox.laserAngle);
+      const beamLen = 1400;
+      const px = player.x - bossFox.x;
+      const py = player.y - bossFox.y;
+      const t = px * dx + py * dy;
+      if (t > 0 && t < beamLen) {
+        const cx = bossFox.x + dx * t;
+        const cy = bossFox.y + dy * t;
+        const d = Math.hypot(player.x - cx, player.y - cy);
+        if (d < 16 + player.w * 0.3) {
+          if (player.shieldTimer <= 0 && player.rocketTimer <= 0) {
+            player.lives = 0;
+            spawnSparkles(player.x, player.y);
+            endGame();
+          } else {
+            spawnShieldHit(player.x, player.y);
+          }
+        }
+      }
+      if (bossFox.phaseTimer <= 0) {
+        bossFox.phase = "idle";
+        bossFox.phaseTimer = 80 + Math.random() * 40;
+        bossFox.laserPower = 0;
+      }
+    }
+    if (bossFox.shakeT > 0) bossFox.shakeT *= 0.9;
+
+    if (player.vy > 1) {
+      const dx = player.x - bossFox.x;
+      const dy = player.y - (bossFox.y - 30);
+      if (Math.abs(dx) < 44 && dy > -12 && dy < 22) {
+        bossFox.hp -= 1;
+        bossFox.hitFlash = 18;
+        player.vy = JUMP_FORCE * 0.95;
+        spawnFurBurst(bossFox.x, bossFox.y - 20);
+        spawnSparkles(bossFox.x, bossFox.y - 20);
+        playSnort(1.6, 0.35);
+        score += 40;
+        if (bossFox.hp <= 0) {
+          bossFox.dead = true;
+          for (let i = 0; i < 6; i += 1) {
+            spawnSparkles(bossFox.x + rand(-30, 30), bossFox.y + rand(-30, 30));
+          }
+          if (portal) {
+            portal.hidden = false;
+            portal.active = true;
+          }
+          score += 200;
+        }
+        updateHud();
+      }
+    }
+  }
+
+  function drawBossHpBar() {
+    if (!bossFox || bossFox.dead) return;
+    const barW = W * 0.7;
+    const barH = 14;
+    const x = (W - barW) / 2;
+    const y = 18;
+    ctx.save();
+    ctx.fillStyle = "rgba(8,8,20,0.7)";
+    roundRect(x - 4, y - 4, barW + 8, barH + 8, 8);
+    ctx.fill();
+    ctx.fillStyle = "rgba(40,10,10,0.7)";
+    roundRect(x, y, barW, barH, 6);
+    ctx.fill();
+    const ratio = Math.max(0, bossFox.hp / bossFox.maxHp);
+    const grad = ctx.createLinearGradient(x, y, x + barW, y);
+    grad.addColorStop(0, "#ff4040");
+    grad.addColorStop(1, "#ffb030");
+    ctx.fillStyle = grad;
+    roundRect(x, y, barW * ratio, barH, 6);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,200,180,0.8)";
+    ctx.lineWidth = 1.5;
+    roundRect(x, y, barW, barH, 6);
+    ctx.stroke();
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 12px Segoe UI, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("Босс-лиса · " + bossFox.hp + " / " + bossFox.maxHp, W / 2, y + barH / 2);
+    ctx.restore();
+  }
+
+  function drawBossFox() {
+    if (!bossFox || bossFox.dead) return;
+    const sy = bossFox.y - cameraY;
+    if (sy < -200 || sy > H + 200) return;
+    const shake = bossFox.shakeT * 4;
+    const sx = bossFox.x + (Math.random() - 0.5) * shake;
+
+    ctx.save();
+    ctx.translate(sx, sy);
+
+    if (bossFox.phase === "aim") {
+      const flicker = (Math.sin(bossFox.phaseTimer * 0.6) + 1) * 0.5;
+      ctx.strokeStyle = "rgba(255,40,40," + (0.4 + flicker * 0.4).toFixed(2) + ")";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 6]);
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(bossFox.laserAngle) * 30, Math.sin(bossFox.laserAngle) * 30);
+      ctx.lineTo(Math.cos(bossFox.laserAngle) * 1400, Math.sin(bossFox.laserAngle) * 1400);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    if (bossFox.phase === "fire") {
+      const beamLen = 1400;
+      const beamW = 18 + Math.sin(bossFox.phaseTimer * 0.8) * 6;
+      ctx.save();
+      ctx.rotate(bossFox.laserAngle);
+      const beamGrad = ctx.createLinearGradient(0, -beamW, 0, beamW);
+      beamGrad.addColorStop(0, "rgba(255,80,80,0)");
+      beamGrad.addColorStop(0.5, "rgba(255,40,40,0.95)");
+      beamGrad.addColorStop(1, "rgba(255,80,80,0)");
+      ctx.fillStyle = beamGrad;
+      ctx.fillRect(0, -beamW, beamLen, beamW * 2);
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.fillRect(0, -3, beamLen, 6);
+      ctx.restore();
+    }
+
+    ctx.scale(2.4, 2.4);
+
+    const tint = bossFox.hitFlash > 0 ? "rgba(255,255,255,0.8)" : null;
+
+    ctx.fillStyle = "#1a0e08";
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 24, 18, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#2c1a0e";
+    for (let i = 0; i < 14; i += 1) {
+      const a = (i / 14) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * 22, Math.sin(a) * 17);
+      ctx.lineTo(Math.cos(a + 0.1) * 27, Math.sin(a + 0.1) * 21);
+      ctx.lineTo(Math.cos(a + 0.2) * 22, Math.sin(a + 0.2) * 17);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    ctx.fillStyle = "#9a4220";
+    ctx.beginPath();
+    ctx.ellipse(0, -1, 20, 15, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#c5663a";
+    ctx.beginPath();
+    ctx.ellipse(0, -2, 17, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#fce8d8";
+    ctx.beginPath();
+    ctx.ellipse(0, 3, 13, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#9a4220";
+    ctx.beginPath();
+    ctx.moveTo(-12, -10); ctx.lineTo(-16, -22); ctx.lineTo(-8, -14); ctx.closePath();
+    ctx.moveTo(12, -10); ctx.lineTo(16, -22); ctx.lineTo(8, -14); ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#5a2a18";
+    ctx.beginPath();
+    ctx.moveTo(-12, -11); ctx.lineTo(-14, -19); ctx.lineTo(-9, -14); ctx.closePath();
+    ctx.moveTo(12, -11); ctx.lineTo(14, -19); ctx.lineTo(9, -14); ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "#fce8d8";
+    ctx.beginPath();
+    ctx.ellipse(-7, -3, 4, 5, 0, 0, Math.PI * 2);
+    ctx.ellipse(7, -3, 4, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#ff3030";
+    ctx.beginPath();
+    ctx.arc(-7, -3, 2.6, 0, Math.PI * 2);
+    ctx.arc(7, -3, 2.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#ffe080";
+    ctx.beginPath();
+    ctx.arc(-7, -3, 1.2, 0, Math.PI * 2);
+    ctx.arc(7, -3, 1.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#f5e0ce";
+    ctx.beginPath();
+    ctx.ellipse(0, 5, 5, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#1a0e08";
+    ctx.beginPath();
+    ctx.ellipse(0, 4.2, 1.6, 1.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#5a2a18";
+    ctx.beginPath();
+    ctx.arc(-4, 7, 1, 0, Math.PI * 2);
+    ctx.arc(4, 7, 1, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (tint) {
+      ctx.globalCompositeOperation = "source-atop";
+      ctx.fillStyle = tint;
+      ctx.fillRect(-30, -30, 60, 60);
+      ctx.globalCompositeOperation = "source-over";
+    }
+
+    ctx.restore();
+  }
+
   function drawPortal() {
     if (!portal || gameMode !== "levels") return;
+    if (portal.hidden) return;
     const sucking = levelTransitionTimer > 0;
     const suckT = portalSuckProgress();
     portal.spin += sucking ? 0.1 + suckT * 0.35 : 0.07;
@@ -5118,6 +5421,7 @@
     drawKnives();
     drawCannonballs();
     drawParticles();
+    drawBossFox();
     drawPortal();
     drawRocketAura();
     drawChinchilla();
@@ -5126,6 +5430,7 @@
     ctx.restore();
     drawPortalGuide();
     drawLevelPortalMarker();
+    drawBossHpBar();
     drawDoubleJumpIndicator();
     drawLives();
     drawPowerupTimers();
@@ -5150,6 +5455,7 @@
     updateSquirrels();
     updateParticles();
     if (gameMode === "levels") {
+      updateBossFox();
       updateLevelTransition();
     } else {
       ensurePlatforms();
