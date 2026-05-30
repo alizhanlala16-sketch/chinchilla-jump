@@ -131,7 +131,6 @@
 
   function drawCosmeticPreview() {
     if (!previewCtx) return;
-    const pal = getSkinPalette();
     const c = previewCtx;
     const pw = previewCanvas.width;
     const ph = previewCanvas.height;
@@ -143,27 +142,127 @@
     c.fillStyle = grad;
     c.fillRect(0, 0, pw, ph);
 
-    c.save();
-    c.translate(pw / 2, ph * 0.62);
-    c.scale(1.05, 1.05);
-
+    const pal = getSkinPalette();
     const t = previewTimer;
     const wobble = Math.sin(t * 0.04) * 0.15;
-    const tailSway = Math.sin(t * 0.06) * 3;
+    const scale = Math.min(pw / 80, ph / 80);
+
+    c.save();
+    c.translate(pw / 2, ph * 0.62);
+    c.scale(scale, scale);
 
     c.fillStyle = "rgba(0,0,0,0.22)";
     c.beginPath();
     c.ellipse(0, 22, 22, 5, 0, 0, Math.PI * 2);
     c.fill();
 
+    drawChinchillaBody(c, pal, t, wobble, selectedHat);
+
+    c.restore();
+  }
+
+  function bindCosmeticButtons() {
+    document.querySelectorAll("#skin-options .cosmetic-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () { setSelectedSkin(btn.dataset.skin); });
+    });
+    document.querySelectorAll("#hat-options .cosmetic-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () { setSelectedHat(btn.dataset.hat); });
+    });
+    updateCosmeticUi();
+  }
+
+  function drawGentlemanHat(c) {
+    c = c || ctx;
+    c.save();
+    c.fillStyle = "#141414";
+    c.beginPath();
+    c.ellipse(0, -17, 19, 4.2, 0, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = "#0a0a0a";
+    c.fillRect(-10, -36, 20, 20);
+    c.fillStyle = "#161616";
+    c.fillRect(-8, -34, 16, 17);
+    c.fillStyle = "#7a1515";
+    c.fillRect(-9, -22, 18, 3.2);
+    c.fillStyle = "#a82020";
+    c.fillRect(-8, -21.5, 16, 1.2);
+    c.fillStyle = "rgba(255,255,255,0.12)";
+    c.fillRect(-7, -33, 2.5, 14);
+    c.restore();
+  }
+
+  function drawBearHat(c) {
+    c = c || ctx;
+    c.save();
+
+    c.fillStyle = "rgba(0,0,0,0.18)";
+    c.beginPath();
+    c.ellipse(0, -10.5, 13, 2.4, 0, 0, Math.PI * 2);
+    c.fill();
+
+    c.fillStyle = "#5a3a1c";
+    c.beginPath();
+    c.ellipse(0, -14, 12, 7, 0, 0, Math.PI * 2);
+    c.fill();
+
+    c.fillStyle = "#7a5028";
+    c.beginPath();
+    c.ellipse(-2, -15, 7, 4, -0.25, 0, Math.PI * 2);
+    c.fill();
+
+    c.fillStyle = "#3a2210";
+    c.fillRect(-12, -12, 24, 2.2);
+    c.fillStyle = "#8a6038";
+    c.fillRect(-12, -12, 24, 0.8);
+
+    c.fillStyle = "#3a2210";
+    c.beginPath();
+    c.arc(-7, -17.5, 3.6, 0, Math.PI * 2);
+    c.arc(7, -17.5, 3.6, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = "#5a3a1c";
+    c.beginPath();
+    c.arc(-7, -17.5, 2.6, 0, Math.PI * 2);
+    c.arc(7, -17.5, 2.6, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = "#d8a884";
+    c.beginPath();
+    c.arc(-7, -17.2, 1.3, 0, Math.PI * 2);
+    c.arc(7, -17.2, 1.3, 0, Math.PI * 2);
+    c.fill();
+
+    c.fillStyle = "#7a5028";
+    c.beginPath();
+    c.arc(0, -18.5, 1.6, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = "#d8a884";
+    c.beginPath();
+    c.arc(0.4, -19, 0.9, 0, Math.PI * 2);
+    c.fill();
+
+    c.strokeStyle = "#3a2210";
+    c.lineWidth = 0.6;
+    c.beginPath();
+    c.moveTo(-3, -11.5);
+    c.lineTo(3, -11.5);
+    c.stroke();
+
+    c.restore();
+  }
+
+  function drawChinchillaBody(c, pal, t, wobble, hat) {
+    const tailSway = Math.sin(t * 0.06) * 4;
+
     c.fillStyle = pal.tailDark;
     c.beginPath();
     c.ellipse(-19, -2 + tailSway, 14, 12, -0.4, 0, Math.PI * 2);
     c.fill();
+
     c.fillStyle = pal.tailMid;
     c.beginPath();
     c.ellipse(-21, -5 + tailSway, 11, 10, -0.5, 0, Math.PI * 2);
     c.fill();
+
     c.fillStyle = pal.tailTuft;
     for (let i = 0; i < 9; i += 1) {
       const a = -1.5 + i * 0.32;
@@ -173,23 +272,78 @@
       c.arc(rx, ry, 4.8, 0, Math.PI * 2);
       c.fill();
     }
+
     c.fillStyle = pal.tailTip;
     c.beginPath();
     c.ellipse(-28, -9 + tailSway, 6, 5, -0.3, 0, Math.PI * 2);
+    c.fill();
+
+    c.fillStyle = pal.tailShadow;
+    c.beginPath();
+    c.ellipse(-21, -7 + tailSway, 9, 4, -0.5, 0, Math.PI * 2);
     c.fill();
 
     c.fillStyle = pal.bodyDark;
     c.beginPath();
     c.ellipse(0, 12, 19, 15, 0, 0, Math.PI * 2);
     c.fill();
+
+    c.fillStyle = pal.bodyTuft;
+    for (let i = 0; i < 9; i += 1) {
+      const a = Math.PI * (1 + i / 8);
+      const rx = Math.cos(a) * 18;
+      const ry = 9 + Math.sin(a) * 14;
+      c.beginPath();
+      c.arc(rx, ry, 4, 0, Math.PI * 2);
+      c.fill();
+    }
+
     c.fillStyle = pal.bodyMid;
     c.beginPath();
     c.ellipse(0, 9, 17, 14, 0, 0, Math.PI * 2);
     c.fill();
+
     c.fillStyle = pal.belly;
     c.beginPath();
     c.ellipse(0, 13, 12, 10, 0, 0, Math.PI * 2);
     c.fill();
+
+    c.fillStyle = "#4a3024";
+    c.beginPath();
+    c.ellipse(-5, 21, 4, 2.8, 0, 0, Math.PI * 2);
+    c.ellipse(5, 21, 4, 2.8, 0, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = "rgba(255,255,255,0.2)";
+    c.beginPath();
+    c.arc(-5, 20, 1, 0, Math.PI * 2);
+    c.arc(5, 20, 1, 0, Math.PI * 2);
+    c.fill();
+
+    c.fillStyle = pal.legOuter;
+    c.beginPath();
+    c.ellipse(-4.5, 11, 3, 4.8, 0.2, 0, Math.PI * 2);
+    c.ellipse(4.5, 11, 3, 4.8, -0.2, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = pal.legInner;
+    c.beginPath();
+    c.ellipse(-4.5, 9, 2, 3, 0.2, 0, Math.PI * 2);
+    c.ellipse(4.5, 9, 2, 3, -0.2, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = "#4a3024";
+    c.beginPath();
+    c.arc(-4.5, 15, 2.2, 0, Math.PI * 2);
+    c.arc(4.5, 15, 2.2, 0, Math.PI * 2);
+    c.fill();
+    c.strokeStyle = "#2a1610";
+    c.lineWidth = 0.5;
+    c.beginPath();
+    c.moveTo(-6, 14.5); c.lineTo(-6, 16.5);
+    c.moveTo(-4.5, 14.5); c.lineTo(-4.5, 16.7);
+    c.moveTo(-3, 14.5); c.lineTo(-3, 16.5);
+    c.moveTo(6, 14.5); c.lineTo(6, 16.5);
+    c.moveTo(4.5, 14.5); c.lineTo(4.5, 16.7);
+    c.moveTo(3, 14.5); c.lineTo(3, 16.5);
+    c.stroke();
 
     c.save();
     c.translate(-7, -13);
@@ -233,10 +387,12 @@
     c.beginPath();
     c.ellipse(0, -1, 15, 14, 0, 0, Math.PI * 2);
     c.fill();
+
     c.fillStyle = pal.headMid;
     c.beginPath();
     c.ellipse(0, -2, 14, 13, 0, 0, Math.PI * 2);
     c.fill();
+
     c.fillStyle = pal.headLight;
     c.beginPath();
     c.ellipse(0, 1, 11, 10, 0, 0, Math.PI * 2);
@@ -247,6 +403,7 @@
     c.arc(-13, 2, 4.5, 0, Math.PI * 2);
     c.arc(13, 2, 4.5, 0, Math.PI * 2);
     c.fill();
+
     c.fillStyle = pal.cheekInner;
     c.beginPath();
     c.arc(-12, 1, 2.8, 0, Math.PI * 2);
@@ -258,21 +415,64 @@
     c.ellipse(0, 5, 7, 4.5, 0, 0, Math.PI * 2);
     c.fill();
 
-    c.fillStyle = "#000";
-    c.beginPath();
-    c.ellipse(6, -2, 3, 4.2, 0, 0, Math.PI * 2);
-    c.ellipse(-6, -2, 3, 4.2, 0, 0, Math.PI * 2);
-    c.fill();
-    c.fillStyle = "#fff";
-    c.beginPath();
-    c.arc(6.9, -3.2, 1.1, 0, Math.PI * 2);
-    c.arc(-5.1, -3.2, 1.1, 0, Math.PI * 2);
-    c.fill();
+    const blink = Math.sin(t * 0.045) > 0.96;
+    if (!blink) {
+      c.fillStyle = "#000000";
+      c.beginPath();
+      c.ellipse(6, -2, 3.0, 4.4, 0, 0, Math.PI * 2);
+      c.ellipse(-6, -2, 3.0, 4.4, 0, 0, Math.PI * 2);
+      c.fill();
+      c.fillStyle = "#ffffff";
+      c.beginPath();
+      c.arc(6.9, -3.4, 1.15, 0, Math.PI * 2);
+      c.arc(-5.1, -3.4, 1.15, 0, Math.PI * 2);
+      c.fill();
+    } else {
+      c.strokeStyle = "#101010";
+      c.lineWidth = 1.2;
+      c.beginPath();
+      c.moveTo(3, -2); c.lineTo(7, -2);
+      c.moveTo(-3, -2); c.lineTo(-7, -2);
+      c.stroke();
+    }
 
     c.fillStyle = "#d06868";
     c.beginPath();
-    c.moveTo(0, 3); c.lineTo(-1.8, 5); c.lineTo(1.8, 5); c.closePath();
+    c.moveTo(0, 3);
+    c.lineTo(-1.8, 5);
+    c.lineTo(1.8, 5);
+    c.closePath();
     c.fill();
+    c.fillStyle = "rgba(255,255,255,0.4)";
+    c.beginPath();
+    c.arc(-0.5, 3.6, 0.5, 0, Math.PI * 2);
+    c.fill();
+
+    c.strokeStyle = "#1a1a1a";
+    c.lineWidth = 0.8;
+    c.beginPath();
+    c.moveTo(0, 5.4);
+    c.lineTo(0, 6.6);
+    c.moveTo(0, 6.6);
+    c.quadraticCurveTo(-1.8, 7.6, -2.8, 7.2);
+    c.moveTo(0, 6.6);
+    c.quadraticCurveTo(1.8, 7.6, 2.8, 7.2);
+    c.stroke();
+    c.fillStyle = "#ffffff";
+    c.fillRect(-0.7, 6.9, 1.4, 1.5);
+
+    c.strokeStyle = pal.whisker;
+    c.lineWidth = 0.7;
+    c.beginPath();
+    c.moveTo(2.5, 3.5); c.quadraticCurveTo(12, 0, 22, -1);
+    c.moveTo(2.5, 4.5); c.quadraticCurveTo(12, 4, 22, 4);
+    c.moveTo(2.5, 5.5); c.quadraticCurveTo(11, 7, 20, 9);
+    c.moveTo(2.5, 6.2); c.quadraticCurveTo(9, 9, 16, 12);
+    c.moveTo(-2.5, 3.5); c.quadraticCurveTo(-12, 0, -22, -1);
+    c.moveTo(-2.5, 4.5); c.quadraticCurveTo(-12, 4, -22, 4);
+    c.moveTo(-2.5, 5.5); c.quadraticCurveTo(-11, 7, -20, 9);
+    c.moveTo(-2.5, 6.2); c.quadraticCurveTo(-9, 9, -16, 12);
+    c.stroke();
 
     c.fillStyle = pal.blush;
     c.beginPath();
@@ -280,157 +480,8 @@
     c.ellipse(-9, 4, 2.8, 1.6, 0, 0, Math.PI * 2);
     c.fill();
 
-    if (selectedHat !== "none") drawHatWithCtx(c, selectedHat);
-
-    c.restore();
-  }
-
-  function drawHatWithCtx(c, kind) {
-    c.save();
-    if (kind === "gentleman") {
-      c.fillStyle = "#141414";
-      c.beginPath();
-      c.ellipse(0, -17, 19, 4.2, 0, 0, Math.PI * 2);
-      c.fill();
-      c.fillStyle = "#0a0a0a";
-      c.fillRect(-10, -36, 20, 20);
-      c.fillStyle = "#161616";
-      c.fillRect(-8, -34, 16, 17);
-      c.fillStyle = "#7a1515";
-      c.fillRect(-9, -22, 18, 3.2);
-      c.fillStyle = "#a82020";
-      c.fillRect(-8, -21.5, 16, 1.2);
-      c.fillStyle = "rgba(255,255,255,0.12)";
-      c.fillRect(-7, -33, 2.5, 14);
-    } else if (kind === "bear") {
-      c.fillStyle = "rgba(0,0,0,0.18)";
-      c.beginPath();
-      c.ellipse(0, -10.5, 13, 2.4, 0, 0, Math.PI * 2);
-      c.fill();
-      c.fillStyle = "#5a3a1c";
-      c.beginPath();
-      c.ellipse(0, -14, 12, 7, 0, 0, Math.PI * 2);
-      c.fill();
-      c.fillStyle = "#7a5028";
-      c.beginPath();
-      c.ellipse(-2, -15, 7, 4, -0.25, 0, Math.PI * 2);
-      c.fill();
-      c.fillStyle = "#3a2210";
-      c.fillRect(-12, -12, 24, 2.2);
-      c.fillStyle = "#8a6038";
-      c.fillRect(-12, -12, 24, 0.8);
-      c.fillStyle = "#3a2210";
-      c.beginPath();
-      c.arc(-7, -17.5, 3.6, 0, Math.PI * 2);
-      c.arc(7, -17.5, 3.6, 0, Math.PI * 2);
-      c.fill();
-      c.fillStyle = "#5a3a1c";
-      c.beginPath();
-      c.arc(-7, -17.5, 2.6, 0, Math.PI * 2);
-      c.arc(7, -17.5, 2.6, 0, Math.PI * 2);
-      c.fill();
-      c.fillStyle = "#d8a884";
-      c.beginPath();
-      c.arc(-7, -17.2, 1.3, 0, Math.PI * 2);
-      c.arc(7, -17.2, 1.3, 0, Math.PI * 2);
-      c.fill();
-      c.fillStyle = "#7a5028";
-      c.beginPath();
-      c.arc(0, -18.5, 1.6, 0, Math.PI * 2);
-      c.fill();
-      c.fillStyle = "#d8a884";
-      c.beginPath();
-      c.arc(0.4, -19, 0.9, 0, Math.PI * 2);
-      c.fill();
-    }
-    c.restore();
-  }
-
-  function bindCosmeticButtons() {
-    document.querySelectorAll("#skin-options .cosmetic-btn").forEach(function (btn) {
-      btn.addEventListener("click", function () { setSelectedSkin(btn.dataset.skin); });
-    });
-    document.querySelectorAll("#hat-options .cosmetic-btn").forEach(function (btn) {
-      btn.addEventListener("click", function () { setSelectedHat(btn.dataset.hat); });
-    });
-    updateCosmeticUi();
-  }
-
-  function drawGentlemanHat() {
-    ctx.save();
-    ctx.fillStyle = "#141414";
-    ctx.beginPath();
-    ctx.ellipse(0, -17, 19, 4.2, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#0a0a0a";
-    ctx.fillRect(-10, -36, 20, 20);
-    ctx.fillStyle = "#161616";
-    ctx.fillRect(-8, -34, 16, 17);
-    ctx.fillStyle = "#7a1515";
-    ctx.fillRect(-9, -22, 18, 3.2);
-    ctx.fillStyle = "#a82020";
-    ctx.fillRect(-8, -21.5, 16, 1.2);
-    ctx.fillStyle = "rgba(255,255,255,0.12)";
-    ctx.fillRect(-7, -33, 2.5, 14);
-    ctx.restore();
-  }
-
-  function drawBearHat() {
-    ctx.save();
-
-    ctx.fillStyle = "rgba(0,0,0,0.18)";
-    ctx.beginPath();
-    ctx.ellipse(0, -10.5, 13, 2.4, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "#5a3a1c";
-    ctx.beginPath();
-    ctx.ellipse(0, -14, 12, 7, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "#7a5028";
-    ctx.beginPath();
-    ctx.ellipse(-2, -15, 7, 4, -0.25, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "#3a2210";
-    ctx.fillRect(-12, -12, 24, 2.2);
-    ctx.fillStyle = "#8a6038";
-    ctx.fillRect(-12, -12, 24, 0.8);
-
-    ctx.fillStyle = "#3a2210";
-    ctx.beginPath();
-    ctx.arc(-7, -17.5, 3.6, 0, Math.PI * 2);
-    ctx.arc(7, -17.5, 3.6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#5a3a1c";
-    ctx.beginPath();
-    ctx.arc(-7, -17.5, 2.6, 0, Math.PI * 2);
-    ctx.arc(7, -17.5, 2.6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#d8a884";
-    ctx.beginPath();
-    ctx.arc(-7, -17.2, 1.3, 0, Math.PI * 2);
-    ctx.arc(7, -17.2, 1.3, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "#7a5028";
-    ctx.beginPath();
-    ctx.arc(0, -18.5, 1.6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#d8a884";
-    ctx.beginPath();
-    ctx.arc(0.4, -19, 0.9, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = "#3a2210";
-    ctx.lineWidth = 0.6;
-    ctx.beginPath();
-    ctx.moveTo(-3, -11.5);
-    ctx.lineTo(3, -11.5);
-    ctx.stroke();
-
-    ctx.restore();
+    if (hat === "gentleman") drawGentlemanHat(c);
+    else if (hat === "bear") drawBearHat(c);
   }
 
   const PLATFORM_TYPES = {
@@ -3628,237 +3679,7 @@
 
     ctx.scale(player.facing * sx, sy);
 
-    const tailSway = Math.sin(t * 0.06) * 4;
-
-    ctx.fillStyle = pal.tailDark;
-    ctx.beginPath();
-    ctx.ellipse(-19, -2 + tailSway, 14, 12, -0.4, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = pal.tailMid;
-    ctx.beginPath();
-    ctx.ellipse(-21, -5 + tailSway, 11, 10, -0.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = pal.tailTuft;
-    for (let i = 0; i < 9; i += 1) {
-      const a = -1.5 + i * 0.32;
-      const rx = -21 + Math.cos(a) * 12;
-      const ry = -5 + tailSway + Math.sin(a) * 11;
-      ctx.beginPath();
-      ctx.arc(rx, ry, 4.8, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    ctx.fillStyle = pal.tailTip;
-    ctx.beginPath();
-    ctx.ellipse(-28, -9 + tailSway, 6, 5, -0.3, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = pal.tailShadow;
-    ctx.beginPath();
-    ctx.ellipse(-21, -7 + tailSway, 9, 4, -0.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = pal.bodyDark;
-    ctx.beginPath();
-    ctx.ellipse(0, 12, 19, 15, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = pal.bodyTuft;
-    for (let i = 0; i < 9; i += 1) {
-      const a = Math.PI * (1 + i / 8);
-      const rx = Math.cos(a) * 18;
-      const ry = 9 + Math.sin(a) * 14;
-      ctx.beginPath();
-      ctx.arc(rx, ry, 4, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    ctx.fillStyle = pal.bodyMid;
-    ctx.beginPath();
-    ctx.ellipse(0, 9, 17, 14, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = pal.belly;
-    ctx.beginPath();
-    ctx.ellipse(0, 13, 12, 10, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "#4a3024";
-    ctx.beginPath();
-    ctx.ellipse(-5, 21, 4, 2.8, 0, 0, Math.PI * 2);
-    ctx.ellipse(5, 21, 4, 2.8, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "rgba(255,255,255,0.2)";
-    ctx.beginPath();
-    ctx.arc(-5, 20, 1, 0, Math.PI * 2);
-    ctx.arc(5, 20, 1, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = pal.legOuter;
-    ctx.beginPath();
-    ctx.ellipse(-4.5, 11, 3, 4.8, 0.2, 0, Math.PI * 2);
-    ctx.ellipse(4.5, 11, 3, 4.8, -0.2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = pal.legInner;
-    ctx.beginPath();
-    ctx.ellipse(-4.5, 9, 2, 3, 0.2, 0, Math.PI * 2);
-    ctx.ellipse(4.5, 9, 2, 3, -0.2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#4a3024";
-    ctx.beginPath();
-    ctx.arc(-4.5, 15, 2.2, 0, Math.PI * 2);
-    ctx.arc(4.5, 15, 2.2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "#2a1610";
-    ctx.lineWidth = 0.5;
-    ctx.beginPath();
-    ctx.moveTo(-6, 14.5); ctx.lineTo(-6, 16.5);
-    ctx.moveTo(-4.5, 14.5); ctx.lineTo(-4.5, 16.7);
-    ctx.moveTo(-3, 14.5); ctx.lineTo(-3, 16.5);
-    ctx.moveTo(6, 14.5); ctx.lineTo(6, 16.5);
-    ctx.moveTo(4.5, 14.5); ctx.lineTo(4.5, 16.7);
-    ctx.moveTo(3, 14.5); ctx.lineTo(3, 16.5);
-    ctx.stroke();
-
-    ctx.save();
-    ctx.translate(-7, -13);
-    ctx.rotate(-0.35 - wobble * 0.4);
-    ctx.fillStyle = pal.earL1;
-    ctx.beginPath();
-    ctx.ellipse(0, -12, 6, 17, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = pal.earL2;
-    ctx.beginPath();
-    ctx.ellipse(0.5, -12, 4, 14, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = pal.earL3;
-    ctx.beginPath();
-    ctx.ellipse(0.5, -11, 2.4, 11, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-
-    ctx.save();
-    ctx.translate(6, -13);
-    ctx.rotate(0.2 + wobble * 0.55);
-    ctx.fillStyle = pal.earR1;
-    ctx.beginPath();
-    ctx.ellipse(0, -14, 7, 19, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = pal.earR2;
-    ctx.beginPath();
-    ctx.ellipse(-0.5, -14, 5, 16, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = pal.earR3;
-    ctx.beginPath();
-    ctx.ellipse(0, -12, 3.8, 14, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = pal.earRInner;
-    ctx.beginPath();
-    ctx.ellipse(0.6, -9, 1.6, 9, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-
-    ctx.fillStyle = pal.headDark;
-    ctx.beginPath();
-    ctx.ellipse(0, -1, 15, 14, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = pal.headMid;
-    ctx.beginPath();
-    ctx.ellipse(0, -2, 14, 13, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = pal.headLight;
-    ctx.beginPath();
-    ctx.ellipse(0, 1, 11, 10, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = pal.cheekOuter;
-    ctx.beginPath();
-    ctx.arc(-13, 2, 4.5, 0, Math.PI * 2);
-    ctx.arc(13, 2, 4.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = pal.cheekInner;
-    ctx.beginPath();
-    ctx.arc(-12, 1, 2.8, 0, Math.PI * 2);
-    ctx.arc(12, 1, 2.8, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = pal.muzzle;
-    ctx.beginPath();
-    ctx.ellipse(0, 5, 7, 4.5, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    const blink = Math.sin(t * 0.045) > 0.96;
-    if (!blink) {
-      ctx.fillStyle = "#000000";
-      ctx.beginPath();
-      ctx.ellipse(6, -2, 3.0, 4.4, 0, 0, Math.PI * 2);
-      ctx.ellipse(-6, -2, 3.0, 4.4, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#ffffff";
-      ctx.beginPath();
-      ctx.arc(6.9, -3.4, 1.15, 0, Math.PI * 2);
-      ctx.arc(-5.1, -3.4, 1.15, 0, Math.PI * 2);
-      ctx.fill();
-    } else {
-      ctx.strokeStyle = "#101010";
-      ctx.lineWidth = 1.2;
-      ctx.beginPath();
-      ctx.moveTo(3, -2); ctx.lineTo(7, -2);
-      ctx.moveTo(-3, -2); ctx.lineTo(-7, -2);
-      ctx.stroke();
-    }
-
-    ctx.fillStyle = "#d06868";
-    ctx.beginPath();
-    ctx.moveTo(0, 3);
-    ctx.lineTo(-1.8, 5);
-    ctx.lineTo(1.8, 5);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = "rgba(255,255,255,0.4)";
-    ctx.beginPath();
-    ctx.arc(-0.5, 3.6, 0.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = "#1a1a1a";
-    ctx.lineWidth = 0.8;
-    ctx.beginPath();
-    ctx.moveTo(0, 5.4);
-    ctx.lineTo(0, 6.6);
-    ctx.moveTo(0, 6.6);
-    ctx.quadraticCurveTo(-1.8, 7.6, -2.8, 7.2);
-    ctx.moveTo(0, 6.6);
-    ctx.quadraticCurveTo(1.8, 7.6, 2.8, 7.2);
-    ctx.stroke();
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(-0.7, 6.9, 1.4, 1.5);
-
-    ctx.strokeStyle = pal.whisker;
-    ctx.lineWidth = 0.7;
-    ctx.beginPath();
-    ctx.moveTo(2.5, 3.5); ctx.quadraticCurveTo(12, 0, 22, -1);
-    ctx.moveTo(2.5, 4.5); ctx.quadraticCurveTo(12, 4, 22, 4);
-    ctx.moveTo(2.5, 5.5); ctx.quadraticCurveTo(11, 7, 20, 9);
-    ctx.moveTo(2.5, 6.2); ctx.quadraticCurveTo(9, 9, 16, 12);
-    ctx.moveTo(-2.5, 3.5); ctx.quadraticCurveTo(-12, 0, -22, -1);
-    ctx.moveTo(-2.5, 4.5); ctx.quadraticCurveTo(-12, 4, -22, 4);
-    ctx.moveTo(-2.5, 5.5); ctx.quadraticCurveTo(-11, 7, -20, 9);
-    ctx.moveTo(-2.5, 6.2); ctx.quadraticCurveTo(-9, 9, -16, 12);
-    ctx.stroke();
-
-    ctx.fillStyle = pal.blush;
-    ctx.beginPath();
-    ctx.ellipse(9, 4, 2.8, 1.6, 0, 0, Math.PI * 2);
-    ctx.ellipse(-9, 4, 2.8, 1.6, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    if (selectedHat === "gentleman") drawGentlemanHat();
-    else if (selectedHat === "bear") drawBearHat();
+    drawChinchillaBody(ctx, pal, t, wobble, selectedHat);
 
     ctx.restore();
   }
