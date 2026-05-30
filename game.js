@@ -146,68 +146,57 @@
 
   function drawBearHat() {
     ctx.save();
-    ctx.fillStyle = "#3a2210";
+
+    ctx.fillStyle = "rgba(0,0,0,0.18)";
     ctx.beginPath();
-    ctx.ellipse(0, -18, 20, 6, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, -10.5, 13, 2.4, 0, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.fillStyle = "#5a3a1c";
     ctx.beginPath();
-    ctx.ellipse(0, -22, 18, 14, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, -14, 12, 7, 0, 0, Math.PI * 2);
     ctx.fill();
+
     ctx.fillStyle = "#7a5028";
     ctx.beginPath();
-    ctx.ellipse(0, -24, 15, 11, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#4a2e14";
-    ctx.beginPath();
-    ctx.ellipse(0, -19, 12, 4, 0, 0, Math.PI * 2);
+    ctx.ellipse(-2, -15, 7, 4, -0.25, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.fillStyle = "#3a2210";
+    ctx.fillRect(-12, -12, 24, 2.2);
+    ctx.fillStyle = "#8a6038";
+    ctx.fillRect(-12, -12, 24, 0.8);
+
+    ctx.fillStyle = "#3a2210";
     ctx.beginPath();
-    ctx.arc(-13, -30, 6, 0, Math.PI * 2);
-    ctx.arc(13, -30, 6, 0, Math.PI * 2);
+    ctx.arc(-7, -17.5, 3.6, 0, Math.PI * 2);
+    ctx.arc(7, -17.5, 3.6, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = "#5a3a1c";
     ctx.beginPath();
-    ctx.arc(-13, -30, 4.5, 0, Math.PI * 2);
-    ctx.arc(13, -30, 4.5, 0, Math.PI * 2);
+    ctx.arc(-7, -17.5, 2.6, 0, Math.PI * 2);
+    ctx.arc(7, -17.5, 2.6, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = "#d8a884";
     ctx.beginPath();
-    ctx.arc(-13, -30, 2.4, 0, Math.PI * 2);
-    ctx.arc(13, -30, 2.4, 0, Math.PI * 2);
+    ctx.arc(-7, -17.2, 1.3, 0, Math.PI * 2);
+    ctx.arc(7, -17.2, 1.3, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "#1a0e08";
+    ctx.fillStyle = "#7a5028";
     ctx.beginPath();
-    ctx.arc(-6, -25, 1.4, 0, Math.PI * 2);
-    ctx.arc(6, -25, 1.4, 0, Math.PI * 2);
+    ctx.arc(0, -18.5, 1.6, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = "#d8a884";
     ctx.beginPath();
-    ctx.arc(-5.6, -25.4, 0.55, 0, Math.PI * 2);
-    ctx.arc(6.4, -25.4, 0.55, 0, Math.PI * 2);
+    ctx.arc(0.4, -19, 0.9, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "#e8c8a8";
+    ctx.strokeStyle = "#3a2210";
+    ctx.lineWidth = 0.6;
     ctx.beginPath();
-    ctx.ellipse(0, -20, 5, 3.6, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#1a0e08";
-    ctx.beginPath();
-    ctx.ellipse(0, -21, 2.4, 1.6, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = "#1a0e08";
-    ctx.lineWidth = 0.8;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.moveTo(-1.5, -19.5);
-    ctx.lineTo(-1.5, -17.5);
-    ctx.moveTo(1.5, -19.5);
-    ctx.lineTo(1.5, -17.5);
+    ctx.moveTo(-3, -11.5);
+    ctx.lineTo(3, -11.5);
     ctx.stroke();
 
     ctx.restore();
