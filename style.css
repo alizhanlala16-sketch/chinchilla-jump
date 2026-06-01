@@ -902,6 +902,14 @@ body.landing {
   margin-top: 16px;
 }
 
+.seo-lead {
+  max-width: 540px;
+  margin: 0 auto 22px;
+  font-size: 16px;
+  line-height: 1.55;
+  color: rgba(244, 246, 255, 0.78);
+}
+
 .cta-btn {
   display: inline-flex;
   align-items: center;
