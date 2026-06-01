@@ -1440,9 +1440,16 @@
   let knives = [];
   let cannons = [];
   let cannonballs = [];
+  let snake = null;
   let lastSawSpawn = 0;
   let lastFoxSpawn = 0;
   let lastCannonSpawn = 0;
+  let lastSnakeSpawn = 0;
+  const SNAKE_SPAWN_HEIGHT = 2000;
+  const SNAKE_SEGMENT_COUNT = 16;
+  const SNAKE_SEGMENT_GAP = 10;
+  const SNAKE_SPEED = 1.8;
+  const SNAKE_HP = 5;
   let squirrels = [];
   let apples = [];
   let rockets = [];
@@ -1599,6 +1606,8 @@
     levelTransitionTimer = 0;
     portal = null;
     bossFox = null;
+    snake = null;
+    lastSnakeSpawn = 0;
 
     if (gameMode === "levels") {
       initLevelWorld(levelProgress);
@@ -1630,6 +1639,8 @@
     lastSawSpawn = INITIAL_Y;
     lastFoxSpawn = INITIAL_Y;
     lastCannonSpawn = INITIAL_Y;
+    lastSnakeSpawn = INITIAL_Y;
+    snake = null;
     squirrels = [];
     apples = [];
     rockets = [];
@@ -2029,6 +2040,16 @@
       }
     }
 
+    if (maxHeight >= SNAKE_SPAWN_HEIGHT && !snake) {
+      if (lastSnakeSpawn === 0 || lastSnakeSpawn === INITIAL_Y) {
+        spawnSnake();
+        lastSnakeSpawn = highestPlatformY;
+      } else if (highestPlatformY < lastSnakeSpawn - 2200) {
+        spawnSnake();
+        lastSnakeSpawn = highestPlatformY;
+      }
+    }
+
     saws = saws.filter((s) => !s.dead && s.y < cameraY + H + 200);
     foxes = foxes.filter((f) => f.y < cameraY + H + 200 && f.life > 0);
     cannons = cannons.filter((c) => !c.dead && c.y < cameraY + H + 200 && c.life > 0);
@@ -2179,6 +2200,197 @@
           endGame();
         }
       }
+    }
+  }
+
+  function spawnSnake() {
+    const startX = clamp(player.x + rand(-120, 120), 60, W - 60);
+    const startY = cameraY + H + 80;
+    const segments = [];
+    for (let i = 0; i < SNAKE_SEGMENT_COUNT; i += 1) {
+      segments.push({ x: startX, y: startY + i * SNAKE_SEGMENT_GAP });
+    }
+    snake = {
+      head: { x: startX, y: startY, vx: 0, vy: -SNAKE_SPEED },
+      segments,
+      targetPlatform: null,
+      target: { x: player.x, y: player.y - 60 },
+      hp: SNAKE_HP,
+      hitFlash: 0,
+      tongueT: 0,
+      slither: 0,
+      dead: false,
+      eatPulse: 0,
+    };
+  }
+
+  function pickSnakeTargetPlatform() {
+    if (!snake) return;
+    const head = snake.head;
+    let best = null;
+    let bestScore = Infinity;
+    for (const p of platforms) {
+      if (p.broken || p.extending) continue;
+      const px = p.x + p.w / 2;
+      const py = p.y;
+      if (py >= head.y - 4) continue;
+      const dx = px - head.x;
+      const dy = py - head.y;
+      const toPlayer = Math.hypot(px - player.x, py - player.y);
+      const dist = Math.hypot(dx, dy);
+      if (dist > 260) continue;
+      const score = dist * 0.6 + toPlayer * 0.8;
+      if (score < bestScore) {
+        bestScore = score;
+        best = p;
+      }
+    }
+    snake.targetPlatform = best;
+  }
+
+  function updateSnake() {
+    if (!snake) return;
+    if (snake.dead) {
+      snake.hitFlash *= 0.9;
+      snake.fadeOut = (snake.fadeOut || 0) + 0.04;
+      if (snake.fadeOut >= 1) snake = null;
+      return;
+    }
+
+    snake.slither += 0.18;
+    snake.tongueT += 0.12;
+    if (snake.hitFlash > 0) snake.hitFlash -= 1;
+    if (snake.eatPulse > 0) snake.eatPulse -= 1;
+
+    const head = snake.head;
+
+    if (!snake.targetPlatform || snake.targetPlatform.broken ||
+        snake.targetPlatform.y >= head.y - 2 ||
+        Math.hypot(snake.targetPlatform.x + snake.targetPlatform.w / 2 - head.x,
+                   snake.targetPlatform.y - head.y) < 28) {
+      pickSnakeTargetPlatform();
+    }
+
+    let tx, ty;
+    if (snake.targetPlatform) {
+      tx = snake.targetPlatform.x + snake.targetPlatform.w / 2;
+      ty = snake.targetPlatform.y - 4;
+    } else {
+      tx = player.x;
+      ty = player.y - 30;
+    }
+
+    const dxT = tx - head.x;
+    const dyT = ty - head.y;
+    const distT = Math.hypot(dxT, dyT) || 1;
+    const wiggle = Math.sin(snake.slither) * 0.8;
+    const desiredVx = (dxT / distT) * SNAKE_SPEED + wiggle * (-dyT / distT);
+    const desiredVy = (dyT / distT) * SNAKE_SPEED + wiggle * (dxT / distT);
+    head.vx += (desiredVx - head.vx) * 0.12;
+    head.vy += (desiredVy - head.vy) * 0.12;
+    head.x += head.vx;
+    head.y += head.vy;
+
+    for (let i = 0; i < snake.segments.length; i += 1) {
+      const seg = snake.segments[i];
+      const prev = i === 0 ? head : snake.segments[i - 1];
+      const dx = prev.x - seg.x;
+      const dy = prev.y - seg.y;
+      const d = Math.hypot(dx, dy) || 1;
+      if (d > SNAKE_SEGMENT_GAP) {
+        const t = (d - SNAKE_SEGMENT_GAP) / d;
+        seg.x += dx * t;
+        seg.y += dy * t;
+      }
+    }
+
+    const headR = 14;
+
+    for (const sq of squirrels) {
+      if (sq.dead) continue;
+      const p = getSquirrelPos(sq);
+      if (Math.hypot(p.x - head.x, p.y - head.y) < headR + 12) {
+        sq.dead = true;
+        spawnFurBurst(p.x, p.y);
+        spawnSparkles(p.x, p.y);
+        score += 5;
+        snake.eatPulse = 18;
+      }
+    }
+
+    for (const fox of foxes) {
+      if (fox.life <= 0 || fox.dead) continue;
+      if (Math.hypot(fox.x - head.x, (fox.y - 14) - head.y) < headR + 22) {
+        fox.life = 0;
+        fox.dead = true;
+        spawnFurBurst(fox.x, fox.y - 14);
+        spawnSparkles(fox.x, fox.y - 14);
+        score += 30;
+        snake.eatPulse = 24;
+      }
+    }
+
+    for (const saw of saws) {
+      if (saw.dead) continue;
+      if (Math.hypot(saw.x - head.x, saw.y - head.y) < headR + saw.r) {
+        saw.dead = true;
+        spawnSparkles(saw.x, saw.y);
+        score += 10;
+        snake.eatPulse = 18;
+      }
+    }
+
+    if (player.invincibleTimer <= 0) {
+      const headHit = Math.hypot(player.x - head.x, player.y - head.y) < headR + player.w * 0.32;
+      let bodyHit = false;
+      for (let i = 0; i < snake.segments.length; i += 1) {
+        const seg = snake.segments[i];
+        const r = 10 - i * 0.2;
+        if (Math.hypot(player.x - seg.x, player.y - seg.y) < r + player.w * 0.3) {
+          bodyHit = true;
+          break;
+        }
+      }
+      if (headHit || bodyHit) {
+        if (player.rocketTimer > 0) {
+          spawnShieldHit(head.x, head.y);
+          head.vx = -head.vx * 1.2;
+          head.vy = Math.abs(head.vy) + 2;
+          damageSnake(1, head.x, head.y);
+        } else if (player.shieldTimer > 0) {
+          spawnShieldHit(head.x, head.y);
+          head.vx = -head.vx * 1.2;
+          head.vy = Math.abs(head.vy) + 2;
+          snake.hitFlash = 12;
+        } else {
+          damagePlayer();
+          const knockX = player.x - head.x;
+          const knockY = player.y - head.y;
+          const kd = Math.hypot(knockX, knockY) || 1;
+          player.vx += (knockX / kd) * 5;
+          player.vy = Math.min(player.vy, -6);
+        }
+      }
+    }
+
+    if (head.y > cameraY + H + 600) {
+      snake.dead = true;
+      snake.fadeOut = 0;
+    }
+  }
+
+  function damageSnake(amount, fx, fy) {
+    if (!snake || snake.dead) return;
+    snake.hp -= amount;
+    snake.hitFlash = 18;
+    spawnLaserBurst(fx, fy, "rgba(120,220,120,0.95)");
+    if (snake.hp <= 0) {
+      snake.dead = true;
+      snake.fadeOut = 0;
+      spawnFurBurst(snake.head.x, snake.head.y);
+      spawnSparkles(snake.head.x, snake.head.y);
+      score += 200;
+      updateHud();
     }
   }
 
@@ -4505,6 +4717,15 @@
         }
       }
     }
+
+    if (snake && !snake.dead) {
+      for (const b of beams) {
+        if (pointHitsBeam(b, snake.head.x, snake.head.y, 14)) {
+          damageSnake(1, snake.head.x, snake.head.y);
+          break;
+        }
+      }
+    }
   }
 
   function drawLasers() {
@@ -5277,6 +5498,175 @@
       ctx.restore();
     }
   }
+  function drawSnake() {
+    if (!snake) return;
+    const fade = snake.dead ? Math.max(0, 1 - (snake.fadeOut || 0)) : 1;
+    if (fade <= 0.02) return;
+
+    ctx.save();
+    ctx.globalAlpha = fade;
+
+    const segs = snake.segments;
+    const head = snake.head;
+
+    for (let i = segs.length - 1; i >= 0; i -= 1) {
+      const seg = segs[i];
+      const sy = seg.y - cameraY;
+      if (sy < -40 || sy > H + 40) continue;
+      const prev = i === 0 ? head : segs[i - 1];
+      const ang = Math.atan2(prev.y - seg.y, prev.x - seg.x);
+      const r = 9 - i * 0.25;
+      const phase = snake.slither + i * 0.4;
+
+      ctx.save();
+      ctx.translate(seg.x, sy);
+      ctx.rotate(ang);
+
+      ctx.fillStyle = "rgba(0,0,0,0.18)";
+      ctx.beginPath();
+      ctx.ellipse(1, 2, r + 1, (r + 1) * 0.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      const bodyDark = snake.hitFlash > 0 ? "#a3e070" : "#2f6b2a";
+      const bodyMid = snake.hitFlash > 0 ? "#d8f4b4" : "#4a9540";
+      const bodyLight = snake.hitFlash > 0 ? "#ecffd0" : "#7ac658";
+
+      ctx.fillStyle = bodyDark;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, r + 1, (r + 1) * 0.85, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = bodyMid;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, r, r * 0.78, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = bodyLight;
+      ctx.beginPath();
+      ctx.ellipse(-r * 0.2, -r * 0.35, r * 0.7, r * 0.35, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      const scaleA = "rgba(20,60,20,0.55)";
+      ctx.fillStyle = scaleA;
+      const sCount = 3;
+      for (let k = 0; k < sCount; k += 1) {
+        const sx = -r * 0.55 + (r * 0.55) * k;
+        ctx.beginPath();
+        ctx.arc(sx, Math.sin(phase + k) * 1.2, r * 0.22, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.fillStyle = "#cfa850";
+      ctx.beginPath();
+      ctx.ellipse(0, r * 0.55, r * 0.55, r * 0.18, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    const hsy = head.y - cameraY;
+    if (hsy > -50 && hsy < H + 50) {
+      const ang = Math.atan2(head.vy, head.vx || 0.001);
+      ctx.save();
+      ctx.translate(head.x, hsy);
+      ctx.rotate(ang);
+
+      ctx.fillStyle = "rgba(0,0,0,0.28)";
+      ctx.beginPath();
+      ctx.ellipse(2, 4, 15, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      const headDark = snake.hitFlash > 0 ? "#bdf07a" : "#2a5e26";
+      const headMid = snake.hitFlash > 0 ? "#dfffb0" : "#4d9a3f";
+      const headLight = snake.hitFlash > 0 ? "#f4ffd2" : "#82d162";
+
+      ctx.fillStyle = headDark;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 15, 11, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = headMid;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 13.5, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = headLight;
+      ctx.beginPath();
+      ctx.ellipse(-2, -3.5, 9, 4.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#1a2b14";
+      ctx.beginPath();
+      ctx.ellipse(7, 4, 4.5, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#cfa850";
+      ctx.beginPath();
+      ctx.ellipse(6.5, 3.6, 3.6, 2.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#fff7a0";
+      ctx.beginPath();
+      ctx.arc(5, -4.5, 3, 0, Math.PI * 2);
+      ctx.arc(5, 4.5, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#1a1a1a";
+      ctx.beginPath();
+      ctx.ellipse(5.6, -4.5, 1.0, 2.4, 0, 0, Math.PI * 2);
+      ctx.ellipse(5.6, 4.5, 1.0, 2.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(6.3, -5.3, 0.6, 0, Math.PI * 2);
+      ctx.arc(6.3, 3.7, 0.6, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.moveTo(13, -1);
+      ctx.lineTo(15, -2);
+      ctx.lineTo(13, -3.5);
+      ctx.closePath();
+      ctx.moveTo(13, 1);
+      ctx.lineTo(15, 2);
+      ctx.lineTo(13, 3.5);
+      ctx.closePath();
+      ctx.fill();
+
+      const tongueOut = (Math.sin(snake.tongueT) + 1) * 4 + 6;
+      const tongueWave = Math.sin(snake.tongueT * 2) * 1.5;
+      ctx.strokeStyle = "#d8366a";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(11, 0);
+      ctx.quadraticCurveTo(11 + tongueOut * 0.6, tongueWave, 11 + tongueOut, -1.8);
+      ctx.moveTo(11 + tongueOut * 0.7, tongueWave * 0.5);
+      ctx.lineTo(11 + tongueOut, 1.8);
+      ctx.stroke();
+
+      if (snake.eatPulse > 0) {
+        const ep = snake.eatPulse / 24;
+        ctx.strokeStyle = "rgba(255,180,80," + (ep * 0.7).toFixed(2) + ")";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, 18 + (1 - ep) * 8, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    if (!snake.dead && snake.hp < SNAKE_HP) {
+      const bx = head.x;
+      const by = head.y - cameraY - 26;
+      const bw = 38;
+      const ratio = snake.hp / SNAKE_HP;
+      ctx.fillStyle = "rgba(0,0,0,0.55)";
+      ctx.fillRect(bx - bw / 2 - 1, by - 1, bw + 2, 5);
+      ctx.fillStyle = "#4d9a3f";
+      ctx.fillRect(bx - bw / 2, by, bw * ratio, 3);
+    }
+
+    ctx.restore();
+  }
+
   function drawCannons() {
     for (const c of cannons) {
       const sy = c.y - cameraY;
@@ -5546,6 +5936,7 @@
     drawCannons();
     drawKnives();
     drawCannonballs();
+    drawSnake();
     drawParticles();
     drawBossFox();
     drawPortal();
@@ -5578,6 +5969,7 @@
     updateCannons();
     updateKnives();
     updateCannonballs();
+    updateSnake();
     updateSquirrels();
     updateParticles();
     if (gameMode === "levels") {
