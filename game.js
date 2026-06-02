@@ -1445,11 +1445,13 @@
   let lastFoxSpawn = 0;
   let lastCannonSpawn = 0;
   let lastSnakeSpawn = 0;
-  const SNAKE_SPAWN_HEIGHT = 2000;
+  const SNAKE_SPAWN_HEIGHT = 1200;
   const SNAKE_SEGMENT_COUNT = 16;
   const SNAKE_SEGMENT_GAP = 10;
-  const SNAKE_SPEED = 1.8;
+  const SNAKE_SPEED = 3.4;
+  const SNAKE_MAX_SPEED = 6.5;
   const SNAKE_HP = 5;
+  const SNAKE_DESPAWN_BELOW = 1400;
   let squirrels = [];
   let apples = [];
   let rockets = [];
@@ -2044,7 +2046,7 @@
       if (lastSnakeSpawn === 0 || lastSnakeSpawn === INITIAL_Y) {
         spawnSnake();
         lastSnakeSpawn = highestPlatformY;
-      } else if (highestPlatformY < lastSnakeSpawn - 2200) {
+      } else if (highestPlatformY < lastSnakeSpawn - 1500) {
         spawnSnake();
         lastSnakeSpawn = highestPlatformY;
       }
@@ -2205,7 +2207,7 @@
 
   function spawnSnake() {
     const startX = clamp(player.x + rand(-120, 120), 60, W - 60);
-    const startY = cameraY + H + 80;
+    const startY = cameraY + H + 30;
     const segments = [];
     for (let i = 0; i < SNAKE_SEGMENT_COUNT; i += 1) {
       segments.push({ x: startX, y: startY + i * SNAKE_SEGMENT_GAP });
@@ -2221,7 +2223,10 @@
       slither: 0,
       dead: false,
       eatPulse: 0,
+      warningTimer: 90,
     };
+    levelBannerText = "Змея ползёт за тобой!";
+    levelBannerTimer = 90;
   }
 
   function pickSnakeTargetPlatform() {
@@ -2284,12 +2289,23 @@
     const dyT = ty - head.y;
     const distT = Math.hypot(dxT, dyT) || 1;
     const wiggle = Math.sin(snake.slither) * 0.8;
-    const desiredVx = (dxT / distT) * SNAKE_SPEED + wiggle * (-dyT / distT);
-    const desiredVy = (dyT / distT) * SNAKE_SPEED + wiggle * (dxT / distT);
-    head.vx += (desiredVx - head.vx) * 0.12;
-    head.vy += (desiredVy - head.vy) * 0.12;
+
+    const behindBy = (head.y - cameraY) - H;
+    let speed = SNAKE_SPEED;
+    if (behindBy > 0) {
+      speed = Math.min(SNAKE_MAX_SPEED, SNAKE_SPEED + behindBy / 80);
+    } else if (head.y > player.y + 200) {
+      speed = Math.min(SNAKE_MAX_SPEED, SNAKE_SPEED + (head.y - player.y - 200) / 120);
+    }
+
+    const desiredVx = (dxT / distT) * speed + wiggle * (-dyT / distT);
+    const desiredVy = (dyT / distT) * speed + wiggle * (dxT / distT);
+    head.vx += (desiredVx - head.vx) * 0.14;
+    head.vy += (desiredVy - head.vy) * 0.14;
     head.x += head.vx;
     head.y += head.vy;
+
+    if (snake.warningTimer > 0) snake.warningTimer -= 1;
 
     for (let i = 0; i < snake.segments.length; i += 1) {
       const seg = snake.segments[i];
@@ -2373,7 +2389,7 @@
       }
     }
 
-    if (head.y > cameraY + H + 600) {
+    if (head.y > cameraY + H + SNAKE_DESPAWN_BELOW) {
       snake.dead = true;
       snake.fadeOut = 0;
     }
