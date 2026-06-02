@@ -1001,11 +1001,12 @@
     if (Math.hypot(dx, dy) < portal.r + player.w * 0.28) onPortalReached();
   }
 
-  function spawnBossEscapePlatforms(fromY, toY) {
-    const gap = (fromY - toY) / 9;
+  function spawnBossEscapePlatforms(bottomY, topY) {
+    const count = 8;
+    const gap = (bottomY - topY) / (count - 1);
     let prevCenter = bossFox ? bossFox.x : W / 2;
-    for (let i = 1; i <= 8; i += 1) {
-      const y = fromY - i * gap;
+    for (let i = 0; i < count; i += 1) {
+      const y = bottomY - i * gap;
       const w = rand(95, 125);
       const minC = Math.max(w / 2 + 18, prevCenter - 150);
       const maxC = Math.min(W - w / 2 - 18, prevCenter + 150);
@@ -1021,14 +1022,15 @@
   function startBossEscape() {
     if (!bossFox) return;
     const oldY = bossFox.y;
-    const newY = bossFox.y - 700;
+    const escapeDist = 620;
+    const newY = oldY - escapeDist;
     bossFox.escaping = true;
     bossFox.escapeFrom = oldY;
     bossFox.escapeTo = newY;
     bossFox.escapeT = 0;
     bossFox.phase = "idle";
     bossFox.phaseTimer = 120;
-    spawnBossEscapePlatforms(oldY - 80, newY + 90);
+    spawnBossEscapePlatforms(oldY - 20, newY + 70);
     if (portal) {
       portal.y = newY - 80;
     }
