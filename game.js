@@ -2646,7 +2646,11 @@
     } else if (gameMode === "levels" && levelOrient === "vertical" && !levelCameraLocked) {
       cameraX = 0;
       const targetCameraY = player.y - (H - HUD_SAFE_BOTTOM - 120);
-      if (targetCameraY < cameraY) cameraY = targetCameraY;
+      if (bossFox && !bossFox.dead) {
+        cameraY += (targetCameraY - cameraY) * 0.12;
+      } else if (targetCameraY < cameraY) {
+        cameraY = targetCameraY;
+      }
     } else if (gameMode !== "levels") {
       cameraX = 0;
       const targetCameraY = player.y - CAMERA_FOLLOW;
