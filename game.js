@@ -2750,7 +2750,7 @@
 
   const LEADERBOARD_KEY = "chinchilla-leaderboard";
   const PLAYER_NAME_KEY = "chinchilla-player-name";
-  const MAX_LEADERBOARD = 5;
+  const MAX_LEADERBOARD = 20;
   const LEADERBOARD_API = "/api/leaderboard";
 
   let leaderboardCache = [];
