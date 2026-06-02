@@ -13,7 +13,7 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://chinchilla-jump.vercel.app/game">
   <meta property="og:locale" content="ru_RU">
-  <link rel="stylesheet" href="style.css?v=15">
+  <link rel="stylesheet" href="style.css?v=16">
 </head>
 <body class="game-page">
   <a href="index.html" class="home-link">← На главную</a>
@@ -111,12 +111,14 @@
       <div class="modal-card">
         <h2 id="lb-title">🏆 Таблица рекордов</h2>
         <p id="leaderboard-status" class="leaderboard-status hidden"></p>
-        <table class="leaderboard-table">
-          <thead>
-            <tr><th>#</th><th>Имя</th><th>Сено</th><th>Высота</th></tr>
-          </thead>
-          <tbody id="leaderboard-body"></tbody>
-        </table>
+        <div class="leaderboard-table-wrap">
+          <table class="leaderboard-table">
+            <thead>
+              <tr><th>#</th><th>Имя</th><th>Сено</th><th>Высота</th></tr>
+            </thead>
+            <tbody id="leaderboard-body"></tbody>
+          </table>
+        </div>
         <div class="btn-row">
           <button id="leaderboard-close" type="button">Закрыть</button>
           <button id="leaderboard-rename" class="btn-secondary" type="button">Сменить имя</button>
