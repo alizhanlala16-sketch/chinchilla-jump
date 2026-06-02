@@ -2215,6 +2215,7 @@
     snake = {
       head: { x: startX, y: startY, vx: 0, vy: -SNAKE_SPEED },
       segments,
+      targetPlatform: null,
       hp: SNAKE_HP,
       hitFlash: 0,
       tongueT: 0,
@@ -2225,6 +2226,30 @@
     };
     levelBannerText = "Змея ползёт за тобой!";
     levelBannerTimer = 90;
+  }
+
+  function pickSnakeTargetPlatform() {
+    if (!snake) return;
+    const head = snake.head;
+    let best = null;
+    let bestScore = Infinity;
+    for (const p of platforms) {
+      if (p.broken || p.extending) continue;
+      const px = p.x + p.w / 2;
+      const py = p.y;
+      if (py >= head.y - 4) continue;
+      const dx = px - head.x;
+      const dy = py - head.y;
+      const toPlayer = Math.hypot(px - player.x, py - player.y);
+      const dist = Math.hypot(dx, dy);
+      if (dist > 280) continue;
+      const score = dist * 0.5 + toPlayer * 0.9;
+      if (score < bestScore) {
+        bestScore = score;
+        best = p;
+      }
+    }
+    snake.targetPlatform = best;
   }
 
   function updateSnake() {
@@ -2243,8 +2268,21 @@
 
     const head = snake.head;
 
-    const tx = player.x;
-    const ty = player.y - 4;
+    if (!snake.targetPlatform || snake.targetPlatform.broken ||
+        snake.targetPlatform.y >= head.y - 2 ||
+        Math.hypot(snake.targetPlatform.x + snake.targetPlatform.w / 2 - head.x,
+                   snake.targetPlatform.y - head.y) < 32) {
+      pickSnakeTargetPlatform();
+    }
+
+    let tx, ty;
+    if (snake.targetPlatform) {
+      tx = snake.targetPlatform.x + snake.targetPlatform.w / 2;
+      ty = snake.targetPlatform.y - 4;
+    } else {
+      tx = player.x;
+      ty = player.y - 4;
+    }
 
     const dxT = tx - head.x;
     const dyT = ty - head.y;
