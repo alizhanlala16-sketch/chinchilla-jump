@@ -528,7 +528,7 @@
     { orient: "horizontal", label: "Дальняя ветка" },
     { orient: "vertical", label: "К вершине" },
   ];
-  const BOSS_LEVEL_PERIOD = 50;
+  const BOSS_LEVEL_PERIOD = 10;
   let bossFox = null;
   let cameraY = 0;
   let score = 0;
