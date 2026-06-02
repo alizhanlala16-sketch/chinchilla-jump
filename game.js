@@ -2100,14 +2100,25 @@
 
   function updateFoxes() {
     for (const fox of foxes) {
+      if (fox.hiding) {
+        fox.respawnTimer -= 1;
+        if (fox.respawnTimer <= 0) {
+          fox.hiding = false;
+          fox.throwTimer = 180 + Math.random() * 120;
+          spawnSparkles(fox.x, fox.y - 14);
+        }
+        continue;
+      }
+
       fox.life -= 1;
       fox.throwTimer -= 1;
 
-      if (gameMode === "levels" && !fox.dead) {
+      if (gameMode === "levels" && levelOrient === "horizontal" && !fox.dead) {
         const dxp = player.x - fox.x;
         const dyp = player.y - (fox.y - 14);
         if (Math.hypot(dxp, dyp) < 28 + player.w * 0.35) {
-          fox.dead = true;
+          fox.hiding = true;
+          fox.respawnTimer = 1200;
           spawnFurBurst(fox.x, fox.y - 14);
           spawnSparkles(fox.x, fox.y - 14);
           score += 20;
@@ -4669,13 +4680,21 @@
     }
 
     for (const fox of foxes) {
-      if (fox.life <= 0) continue;
+      if (fox.life <= 0 || fox.hiding) continue;
       for (const b of beams) {
         if (pointHitsBeam(b, fox.x, fox.y - 18, 36)) {
-          fox.life = 0;
-          spawnLaserBurst(fox.x, fox.y - 18, "rgba(255,120,80,0.95)");
-          spawnFurBurst(fox.x, fox.y - 14);
-          score += 60;
+          if (gameMode === "levels" && levelOrient === "horizontal") {
+            fox.hiding = true;
+            fox.respawnTimer = 1200;
+            spawnLaserBurst(fox.x, fox.y - 18, "rgba(255,120,80,0.95)");
+            spawnFurBurst(fox.x, fox.y - 14);
+            score += 60;
+          } else if (gameMode !== "levels") {
+            fox.life = 0;
+            spawnLaserBurst(fox.x, fox.y - 18, "rgba(255,120,80,0.95)");
+            spawnFurBurst(fox.x, fox.y - 14);
+            score += 60;
+          }
           updateHud();
           break;
         }
@@ -5084,6 +5103,23 @@
       ctx.beginPath();
       ctx.ellipse(-11, 25.5, 1.6, 0.9, 0.2, 0, Math.PI * 2);
       ctx.fill();
+
+      if (fox.hiding) {
+        const timeLeft = fox.respawnTimer / 60;
+        ctx.fillStyle = "#e8b440";
+        ctx.font = "bold 9px Segoe UI, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(timeLeft.toFixed(0) + "с", 0, 0);
+        const pulse = 0.4 + Math.sin(fox.respawnTimer * 0.12) * 0.15;
+        ctx.fillStyle = "rgba(232, 180, 64, " + pulse.toFixed(2) + ")";
+        ctx.beginPath();
+        ctx.arc(-5, -3, 1.4, 0, Math.PI * 2);
+        ctx.arc(5, -3, 1.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        continue;
+      }
 
       const facing = fox.side === "left" ? 1 : -1;
       ctx.scale(facing, 1);
