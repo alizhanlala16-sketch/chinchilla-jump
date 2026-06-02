@@ -1448,8 +1448,8 @@
   const SNAKE_SPAWN_HEIGHT = 1200;
   const SNAKE_SEGMENT_COUNT = 16;
   const SNAKE_SEGMENT_GAP = 10;
-  const SNAKE_SPEED = 3.4;
-  const SNAKE_MAX_SPEED = 6.5;
+  const SNAKE_SPEED = 2.7;
+  const SNAKE_MAX_SPEED = 5.4;
   const SNAKE_HP = 5;
   const SNAKE_DESPAWN_BELOW = 1400;
   let squirrels = [];
@@ -2215,8 +2215,6 @@
     snake = {
       head: { x: startX, y: startY, vx: 0, vy: -SNAKE_SPEED },
       segments,
-      targetPlatform: null,
-      target: { x: player.x, y: player.y - 60 },
       hp: SNAKE_HP,
       hitFlash: 0,
       tongueT: 0,
@@ -2227,30 +2225,6 @@
     };
     levelBannerText = "Змея ползёт за тобой!";
     levelBannerTimer = 90;
-  }
-
-  function pickSnakeTargetPlatform() {
-    if (!snake) return;
-    const head = snake.head;
-    let best = null;
-    let bestScore = Infinity;
-    for (const p of platforms) {
-      if (p.broken || p.extending) continue;
-      const px = p.x + p.w / 2;
-      const py = p.y;
-      if (py >= head.y - 4) continue;
-      const dx = px - head.x;
-      const dy = py - head.y;
-      const toPlayer = Math.hypot(px - player.x, py - player.y);
-      const dist = Math.hypot(dx, dy);
-      if (dist > 260) continue;
-      const score = dist * 0.6 + toPlayer * 0.8;
-      if (score < bestScore) {
-        bestScore = score;
-        best = p;
-      }
-    }
-    snake.targetPlatform = best;
   }
 
   function updateSnake() {
@@ -2269,21 +2243,8 @@
 
     const head = snake.head;
 
-    if (!snake.targetPlatform || snake.targetPlatform.broken ||
-        snake.targetPlatform.y >= head.y - 2 ||
-        Math.hypot(snake.targetPlatform.x + snake.targetPlatform.w / 2 - head.x,
-                   snake.targetPlatform.y - head.y) < 28) {
-      pickSnakeTargetPlatform();
-    }
-
-    let tx, ty;
-    if (snake.targetPlatform) {
-      tx = snake.targetPlatform.x + snake.targetPlatform.w / 2;
-      ty = snake.targetPlatform.y - 4;
-    } else {
-      tx = player.x;
-      ty = player.y - 30;
-    }
+    const tx = player.x;
+    const ty = player.y - 4;
 
     const dxT = tx - head.x;
     const dyT = ty - head.y;
@@ -2331,18 +2292,6 @@
         spawnSparkles(p.x, p.y);
         score += 5;
         snake.eatPulse = 18;
-      }
-    }
-
-    for (const fox of foxes) {
-      if (fox.life <= 0 || fox.dead) continue;
-      if (Math.hypot(fox.x - head.x, (fox.y - 14) - head.y) < headR + 22) {
-        fox.life = 0;
-        fox.dead = true;
-        spawnFurBurst(fox.x, fox.y - 14);
-        spawnSparkles(fox.x, fox.y - 14);
-        score += 30;
-        snake.eatPulse = 24;
       }
     }
 
@@ -5543,9 +5492,9 @@
       ctx.ellipse(1, 2, r + 1, (r + 1) * 0.7, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      const bodyDark = snake.hitFlash > 0 ? "#a3e070" : "#2f6b2a";
-      const bodyMid = snake.hitFlash > 0 ? "#d8f4b4" : "#4a9540";
-      const bodyLight = snake.hitFlash > 0 ? "#ecffd0" : "#7ac658";
+      const bodyDark = snake.hitFlash > 0 ? "#7ac060" : "#0f2a14";
+      const bodyMid = snake.hitFlash > 0 ? "#a8df80" : "#1d4621";
+      const bodyLight = snake.hitFlash > 0 ? "#cef0a0" : "#356b32";
 
       ctx.fillStyle = bodyDark;
       ctx.beginPath();
@@ -5562,7 +5511,7 @@
       ctx.ellipse(-r * 0.2, -r * 0.35, r * 0.7, r * 0.35, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      const scaleA = "rgba(20,60,20,0.55)";
+      const scaleA = "rgba(8,20,8,0.75)";
       ctx.fillStyle = scaleA;
       const sCount = 3;
       for (let k = 0; k < sCount; k += 1) {
@@ -5572,7 +5521,7 @@
         ctx.fill();
       }
 
-      ctx.fillStyle = "#cfa850";
+      ctx.fillStyle = "#8a7028";
       ctx.beginPath();
       ctx.ellipse(0, r * 0.55, r * 0.55, r * 0.18, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -5592,9 +5541,9 @@
       ctx.ellipse(2, 4, 15, 10, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      const headDark = snake.hitFlash > 0 ? "#bdf07a" : "#2a5e26";
-      const headMid = snake.hitFlash > 0 ? "#dfffb0" : "#4d9a3f";
-      const headLight = snake.hitFlash > 0 ? "#f4ffd2" : "#82d162";
+      const headDark = snake.hitFlash > 0 ? "#7ac060" : "#0a1e0d";
+      const headMid = snake.hitFlash > 0 ? "#a8df80" : "#1c4520";
+      const headLight = snake.hitFlash > 0 ? "#cef0a0" : "#356a32";
 
       ctx.fillStyle = headDark;
       ctx.beginPath();
@@ -5609,11 +5558,11 @@
       ctx.ellipse(-2, -3.5, 9, 4.5, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = "#1a2b14";
+      ctx.fillStyle = "#0a1208";
       ctx.beginPath();
       ctx.ellipse(7, 4, 4.5, 3, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = "#cfa850";
+      ctx.fillStyle = "#8a7028";
       ctx.beginPath();
       ctx.ellipse(6.5, 3.6, 3.6, 2.2, 0, 0, Math.PI * 2);
       ctx.fill();
