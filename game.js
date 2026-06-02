@@ -674,17 +674,17 @@
     worldWidth = W;
     cameraY = 0;
     const bossIndex = Math.max(1, Math.floor(levelNum / BOSS_LEVEL_PERIOD));
-    const arenaTopY = -H * 1.6;
     const arenaBottomY = H - 60;
+    const bossY = 170;
 
     platforms.push(makePlatform(W / 2 - 90, arenaBottomY, 180, "grass"));
 
-    const platformRows = 9;
-    const rowGap = (arenaBottomY - (arenaTopY + 120)) / (platformRows + 1);
+    const platformRows = 4;
+    const rowGap = (arenaBottomY - (bossY + 90)) / (platformRows + 1);
     let prevCenter = W / 2;
     for (let i = 1; i <= platformRows; i += 1) {
       const y = arenaBottomY - i * rowGap;
-      const w = rand(90, 120);
+      const w = rand(95, 125);
       const minC = Math.max(w / 2 + 18, prevCenter - 150);
       const maxC = Math.min(W - w / 2 - 18, prevCenter + 150);
       const cx = rand(minC, maxC);
@@ -692,7 +692,6 @@
       prevCenter = cx;
     }
 
-    const bossY = arenaTopY + 80;
     platforms.push(makePlatform(W / 2 - 90, bossY + 40, 180, "log"));
     bossFox = {
       x: W / 2,
@@ -710,8 +709,8 @@
       bossIndex,
     };
 
-    const portalY = arenaTopY + 6;
-    portal = { x: W / 2, y: portalY, r: 38, active: false, spin: 0, pulse: 0, hidden: true };
+    const portalY = bossY - 80;
+    portal = { x: W / 2, y: portalY, r: 36, active: false, spin: 0, pulse: 0, hidden: true };
 
     player.x = W / 2;
     player.y = arenaBottomY - 40;
