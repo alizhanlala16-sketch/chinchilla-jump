@@ -1448,8 +1448,8 @@
   const SNAKE_SPAWN_HEIGHT = 1200;
   const SNAKE_SEGMENT_COUNT = 16;
   const SNAKE_SEGMENT_GAP = 10;
-  const SNAKE_SPEED = 2.7;
-  const SNAKE_MAX_SPEED = 5.4;
+  const SNAKE_SPEED = 1.9;
+  const SNAKE_MAX_SPEED = 3.8;
   const SNAKE_HP = 5;
   const SNAKE_DESPAWN_BELOW = 1400;
   let squirrels = [];
