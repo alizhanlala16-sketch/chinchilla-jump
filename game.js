@@ -693,13 +693,16 @@
     }
 
     platforms.push(makePlatform(W / 2 - 90, bossY + 40, 180, "log"));
+    const bossHp = Math.min(9, 4 + bossIndex);
     bossFox = {
       x: W / 2,
       y: bossY,
-      hp: 4 + bossIndex,
-      maxHp: 4 + bossIndex,
+      hp: bossHp,
+      maxHp: bossHp,
       phase: "idle",
-      phaseTimer: 180,
+      phaseTimer: 70,
+      escaping: false,
+      escapeT: 0,
       aimAngle: Math.PI / 2,
       laserAngle: Math.PI / 2,
       laserPower: 0,
@@ -998,23 +1001,69 @@
     if (Math.hypot(dx, dy) < portal.r + player.w * 0.28) onPortalReached();
   }
 
+  function spawnBossEscapePlatforms(fromY, toY) {
+    const gap = (fromY - toY) / 9;
+    let prevCenter = bossFox ? bossFox.x : W / 2;
+    for (let i = 1; i <= 8; i += 1) {
+      const y = fromY - i * gap;
+      const w = rand(95, 125);
+      const minC = Math.max(w / 2 + 18, prevCenter - 150);
+      const maxC = Math.min(W - w / 2 - 18, prevCenter + 150);
+      const cx = rand(minC, maxC);
+      platforms.push(makePlatform(cx - w / 2, y, w, i % 2 === 0 ? "log" : "grass"));
+      prevCenter = cx;
+      for (let s = 0; s < 6; s += 1) {
+        spawnSparkles(cx + rand(-20, 20), y + rand(-8, 8));
+      }
+    }
+  }
+
+  function startBossEscape() {
+    if (!bossFox) return;
+    const oldY = bossFox.y;
+    const newY = bossFox.y - 700;
+    bossFox.escaping = true;
+    bossFox.escapeFrom = oldY;
+    bossFox.escapeTo = newY;
+    bossFox.escapeT = 0;
+    bossFox.phase = "idle";
+    bossFox.phaseTimer = 120;
+    spawnBossEscapePlatforms(oldY - 80, newY + 90);
+    if (portal) {
+      portal.y = newY - 80;
+    }
+  }
+
   function updateBossFox() {
     if (gameMode !== "levels") return;
     if (!bossFox || bossFox.dead) return;
     if (state !== "playing" || levelTransitionTimer > 0) return;
 
     if (bossFox.hitFlash > 0) bossFox.hitFlash -= 1;
+
+    if (bossFox.escaping) {
+      bossFox.escapeT = Math.min(1, bossFox.escapeT + 1 / 60);
+      const ease = 1 - Math.pow(1 - bossFox.escapeT, 3);
+      bossFox.y = bossFox.escapeFrom + (bossFox.escapeTo - bossFox.escapeFrom) * ease;
+      if (bossFox.escapeT >= 1) {
+        bossFox.escaping = false;
+        bossFox.phaseTimer = 100;
+      }
+      if (Math.random() < 0.3) spawnSparkles(bossFox.x + rand(-25, 25), bossFox.y + rand(-20, 20));
+      return;
+    }
+
     bossFox.phaseTimer -= 1;
 
     const targetAngle = Math.atan2(player.y - bossFox.y, player.x - bossFox.x);
     if (bossFox.phase === "idle" || bossFox.phase === "aim") {
       const diff = ((targetAngle - bossFox.aimAngle + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-      bossFox.aimAngle += diff * (bossFox.phase === "aim" ? 0.05 : 0.03);
+      bossFox.aimAngle += diff * (bossFox.phase === "aim" ? 0.025 : 0.018);
     }
 
     if (bossFox.phase === "idle" && bossFox.phaseTimer <= 0) {
       bossFox.phase = "aim";
-      bossFox.phaseTimer = 95;
+      bossFox.phaseTimer = 130;
       bossFox.laserAngle = bossFox.aimAngle;
     } else if (bossFox.phase === "aim") {
       bossFox.laserAngle = bossFox.aimAngle;
@@ -1037,13 +1086,16 @@
         const cx = bossFox.x + dx * t;
         const cy = bossFox.y + dy * t;
         const d = Math.hypot(player.x - cx, player.y - cy);
-        if (d < 14 + player.w * 0.25) {
+        if (d < 26 + player.w * 0.3) {
+          if (player.invincibleTimer <= 0 && player.shieldTimer <= 0 && player.rocketTimer <= 0) {
+            playSqueak();
+          }
           damagePlayer();
         }
       }
       if (bossFox.phaseTimer <= 0) {
         bossFox.phase = "idle";
-        bossFox.phaseTimer = 140 + Math.random() * 60;
+        bossFox.phaseTimer = 60 + Math.random() * 40;
         bossFox.laserPower = 0;
       }
     }
@@ -1051,8 +1103,8 @@
 
     if (player.vy > 1) {
       const dx = player.x - bossFox.x;
-      const dy = player.y - (bossFox.y - 30);
-      if (Math.abs(dx) < 44 && dy > -12 && dy < 22) {
+      const dy = player.y - (bossFox.y - 40);
+      if (Math.abs(dx) < 60 && dy > -20 && dy < 30) {
         bossFox.hp -= 1;
         bossFox.hitFlash = 18;
         player.vy = JUMP_FORCE * 0.95;
@@ -1070,6 +1122,8 @@
             portal.active = true;
           }
           score += 200;
+        } else {
+          startBossEscape();
         }
         updateHud();
       }
@@ -1113,7 +1167,7 @@
     if (gameMode !== "levels") return;
     if (!bossFox || bossFox.dead) return;
     const sy = bossFox.y - cameraY;
-    if (sy < -200 || sy > H + 200) return;
+    if (sy < -300 || sy > H + 300) return;
     const shake = bossFox.shakeT * 4;
     const sx = bossFox.x + (Math.random() - 0.5) * shake;
 
@@ -1122,9 +1176,9 @@
 
     if (bossFox.phase === "aim") {
       const flicker = (Math.sin(bossFox.phaseTimer * 0.6) + 1) * 0.5;
-      ctx.strokeStyle = "rgba(255,40,40," + (0.4 + flicker * 0.4).toFixed(2) + ")";
-      ctx.lineWidth = 2;
-      ctx.setLineDash([6, 6]);
+      ctx.strokeStyle = "rgba(255,40,40," + (0.45 + flicker * 0.4).toFixed(2) + ")";
+      ctx.lineWidth = 5;
+      ctx.setLineDash([10, 8]);
       ctx.beginPath();
       ctx.moveTo(Math.cos(bossFox.laserAngle) * 30, Math.sin(bossFox.laserAngle) * 30);
       ctx.lineTo(Math.cos(bossFox.laserAngle) * 1400, Math.sin(bossFox.laserAngle) * 1400);
@@ -1134,98 +1188,35 @@
 
     if (bossFox.phase === "fire") {
       const beamLen = 1400;
-      const beamW = 18 + Math.sin(bossFox.phaseTimer * 0.8) * 6;
+      const beamW = 32 + Math.sin(bossFox.phaseTimer * 0.8) * 8;
       ctx.save();
       ctx.rotate(bossFox.laserAngle);
+      const outerGrad = ctx.createLinearGradient(0, -beamW * 1.5, 0, beamW * 1.5);
+      outerGrad.addColorStop(0, "rgba(255,120,120,0)");
+      outerGrad.addColorStop(0.5, "rgba(255,60,60,0.55)");
+      outerGrad.addColorStop(1, "rgba(255,120,120,0)");
+      ctx.fillStyle = outerGrad;
+      ctx.fillRect(0, -beamW * 1.5, beamLen, beamW * 3);
       const beamGrad = ctx.createLinearGradient(0, -beamW, 0, beamW);
       beamGrad.addColorStop(0, "rgba(255,80,80,0)");
       beamGrad.addColorStop(0.5, "rgba(255,40,40,0.95)");
       beamGrad.addColorStop(1, "rgba(255,80,80,0)");
       ctx.fillStyle = beamGrad;
       ctx.fillRect(0, -beamW, beamLen, beamW * 2);
-      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.fillRect(0, -7, beamLen, 14);
+      ctx.fillStyle = "rgba(255,255,255,0.5)";
       ctx.fillRect(0, -3, beamLen, 6);
       ctx.restore();
     }
 
-    ctx.scale(2.4, 2.4);
+    ctx.scale(3.4, 3.4);
+    const facing = player.x < bossFox.x ? -1 : 1;
+    drawFoxBody({ facing, omitSmile: true, crown: true });
 
-    const tint = bossFox.hitFlash > 0 ? "rgba(255,255,255,0.8)" : null;
-
-    ctx.fillStyle = "#1a0e08";
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 24, 18, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "#2c1a0e";
-    for (let i = 0; i < 14; i += 1) {
-      const a = (i / 14) * Math.PI * 2;
-      ctx.beginPath();
-      ctx.moveTo(Math.cos(a) * 22, Math.sin(a) * 17);
-      ctx.lineTo(Math.cos(a + 0.1) * 27, Math.sin(a + 0.1) * 21);
-      ctx.lineTo(Math.cos(a + 0.2) * 22, Math.sin(a + 0.2) * 17);
-      ctx.closePath();
-      ctx.fill();
-    }
-
-    ctx.fillStyle = "#9a4220";
-    ctx.beginPath();
-    ctx.ellipse(0, -1, 20, 15, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#c5663a";
-    ctx.beginPath();
-    ctx.ellipse(0, -2, 17, 12, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#fce8d8";
-    ctx.beginPath();
-    ctx.ellipse(0, 3, 13, 8, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "#9a4220";
-    ctx.beginPath();
-    ctx.moveTo(-12, -10); ctx.lineTo(-16, -22); ctx.lineTo(-8, -14); ctx.closePath();
-    ctx.moveTo(12, -10); ctx.lineTo(16, -22); ctx.lineTo(8, -14); ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = "#5a2a18";
-    ctx.beginPath();
-    ctx.moveTo(-12, -11); ctx.lineTo(-14, -19); ctx.lineTo(-9, -14); ctx.closePath();
-    ctx.moveTo(12, -11); ctx.lineTo(14, -19); ctx.lineTo(9, -14); ctx.closePath();
-    ctx.fill();
-
-    ctx.fillStyle = "#fce8d8";
-    ctx.beginPath();
-    ctx.ellipse(-7, -3, 4, 5, 0, 0, Math.PI * 2);
-    ctx.ellipse(7, -3, 4, 5, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#ff3030";
-    ctx.beginPath();
-    ctx.arc(-7, -3, 2.6, 0, Math.PI * 2);
-    ctx.arc(7, -3, 2.6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#ffe080";
-    ctx.beginPath();
-    ctx.arc(-7, -3, 1.2, 0, Math.PI * 2);
-    ctx.arc(7, -3, 1.2, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "#f5e0ce";
-    ctx.beginPath();
-    ctx.ellipse(0, 5, 5, 4, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#1a0e08";
-    ctx.beginPath();
-    ctx.ellipse(0, 4.2, 1.6, 1.2, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "#5a2a18";
-    ctx.beginPath();
-    ctx.arc(-4, 7, 1, 0, Math.PI * 2);
-    ctx.arc(4, 7, 1, 0, Math.PI * 2);
-    ctx.fill();
-
-    if (tint) {
+    if (bossFox.hitFlash > 0) {
       ctx.globalCompositeOperation = "source-atop";
-      ctx.fillStyle = tint;
+      ctx.fillStyle = "rgba(255,255,255,0.8)";
       ctx.fillRect(-30, -30, 60, 60);
       ctx.globalCompositeOperation = "source-over";
     }
@@ -1827,6 +1818,40 @@
     snortBuffer = buf;
     return buf;
   }
+  function playSqueak() {
+    const actx = getAudioCtx();
+    if (!actx) return;
+    const now = actx.currentTime;
+    const osc = actx.createOscillator();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(820, now);
+    osc.frequency.exponentialRampToValueAtTime(1480, now + 0.05);
+    osc.frequency.exponentialRampToValueAtTime(440, now + 0.32);
+    const gain = actx.createGain();
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.28, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
+    const bp = actx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = 1100;
+    bp.Q.value = 4;
+    osc.connect(bp).connect(gain).connect(actx.destination);
+    osc.start(now);
+    osc.stop(now + 0.36);
+
+    const osc2 = actx.createOscillator();
+    osc2.type = "triangle";
+    osc2.frequency.setValueAtTime(1640, now);
+    osc2.frequency.exponentialRampToValueAtTime(880, now + 0.32);
+    const g2 = actx.createGain();
+    g2.gain.setValueAtTime(0, now);
+    g2.gain.linearRampToValueAtTime(0.14, now + 0.02);
+    g2.gain.exponentialRampToValueAtTime(0.0005, now + 0.33);
+    osc2.connect(g2).connect(actx.destination);
+    osc2.start(now);
+    osc2.stop(now + 0.35);
+  }
+
   function playSnort(pitch, vol) {
     const actx = getAudioCtx();
     if (!actx) return;
@@ -5114,180 +5139,207 @@
         continue;
       }
 
-      const facing = fox.side === "left" ? 1 : -1;
-      ctx.scale(facing, 1);
+      drawFoxBody({ facing: fox.side === "left" ? 1 : -1 });
 
-      ctx.fillStyle = cBodyMid;
-      ctx.beginPath();
-      ctx.ellipse(-22, 11, 11, 7, -0.3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#fff8f0";
-      ctx.beginPath();
-      ctx.ellipse(-28, 9, 6, 4, -0.3, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = cBodyDark;
-      ctx.beginPath();
-      ctx.ellipse(-3, 10, 19, 13, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = cBodyMid;
-      ctx.beginPath();
-      ctx.ellipse(-2, 8, 18, 12, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = cBodyDark;
-      for (let i = 0; i < 5; i += 1) {
-        const a = -0.5 + i * 0.35;
-        ctx.beginPath();
-        ctx.arc(Math.cos(a) * 15 - 2, Math.sin(a) * 11 + 5, 3.2, 0, Math.PI * 2);
-        ctx.fill();
+      if (fox.throwTimer < 30 && fox.life > 60) {
+        ctx.save();
+        const knifeFacing = fox.side === "left" ? 1 : -1;
+        ctx.scale(knifeFacing, 1);
+        drawFoxKnife();
+        ctx.restore();
       }
 
-      ctx.fillStyle = cBelly;
-      ctx.beginPath();
-      ctx.ellipse(-2, 14, 11, 6, 0, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.restore();
+      continue;
+    }
+  }
 
-      ctx.fillStyle = cBodyDark;
-      ctx.beginPath();
-      ctx.ellipse(3, 19, 4.5, 3.2, 0, 0, Math.PI * 2);
-      ctx.ellipse(-7, 20, 4.5, 3.2, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = "#1a1a1a";
-      ctx.lineWidth = 0.7;
-      ctx.beginPath();
-      ctx.moveTo(1, 20); ctx.lineTo(0, 22.5);
-      ctx.moveTo(3, 20); ctx.lineTo(3, 22.7);
-      ctx.moveTo(5, 20); ctx.lineTo(6, 22.5);
-      ctx.moveTo(-9, 21); ctx.lineTo(-10, 23.3);
-      ctx.moveTo(-7, 21); ctx.lineTo(-7, 23.5);
-      ctx.moveTo(-5, 21); ctx.lineTo(-4, 23.3);
-      ctx.stroke();
+  function drawFoxBody(opts) {
+    const facing = opts && opts.facing ? opts.facing : 1;
+    const omitSmile = !!(opts && opts.omitSmile);
+    const crown = !!(opts && opts.crown);
+    const cBodyDark = "#9a4220";
+    const cBodyMid = "#c5663a";
+    const cBodyLight = "#e88858";
+    const cEarInner = "#5a2a18";
+    const cSnout = "#f5e0ce";
+    const cBelly = "#fce8d8";
 
-      ctx.fillStyle = cBodyLight;
-      ctx.beginPath();
-      ctx.ellipse(5, 4, 12, 9, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = cBelly;
-      ctx.beginPath();
-      ctx.ellipse(7, 6, 7, 6, 0, 0, Math.PI * 2);
-      ctx.fill();
+    ctx.save();
+    ctx.scale(facing, 1);
 
-      ctx.fillStyle = cBodyMid;
-      ctx.beginPath();
-      ctx.ellipse(10, -3, 14, 12, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = cBodyDark;
-      ctx.beginPath();
-      ctx.ellipse(10, -9, 11, 5, 0, 0, Math.PI);
-      ctx.fill();
-      ctx.fillStyle = cBodyLight;
-      ctx.beginPath();
-      ctx.ellipse(11, -1, 11, 9, 0, 0, Math.PI * 2);
-      ctx.fill();
+    ctx.fillStyle = cBodyMid;
+    ctx.beginPath();
+    ctx.ellipse(-22, 11, 11, 7, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#fff8f0";
+    ctx.beginPath();
+    ctx.ellipse(-28, 9, 6, 4, -0.3, 0, Math.PI * 2);
+    ctx.fill();
 
-      ctx.fillStyle = cBodyDark;
-      ctx.beginPath();
-      ctx.moveTo(2, -9); ctx.lineTo(-2, -22); ctx.lineTo(9, -11); ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = cEarInner;
-      ctx.beginPath();
-      ctx.moveTo(3, -11); ctx.lineTo(0, -19); ctx.lineTo(7, -12); ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = cBodyMid;
-      ctx.beginPath();
-      ctx.moveTo(13, -9); ctx.lineTo(18, -24); ctx.lineTo(9, -11); ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = cBodyLight;
-      ctx.beginPath();
-      ctx.moveTo(14, -10); ctx.lineTo(17, -22); ctx.lineTo(11, -11); ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = cEarInner;
-      ctx.beginPath();
-      ctx.moveTo(15, -11); ctx.lineTo(16, -20); ctx.lineTo(12, -12); ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = "#ffffff";
-      ctx.beginPath();
-      ctx.arc(17, -22, 1.3, 0, Math.PI * 2);
-      ctx.arc(-2, -21, 1.1, 0, Math.PI * 2);
-      ctx.fill();
+    ctx.fillStyle = cBodyDark;
+    ctx.beginPath();
+    ctx.ellipse(-3, 10, 19, 13, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = cBodyMid;
+    ctx.beginPath();
+    ctx.ellipse(-2, 8, 18, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
 
-      ctx.fillStyle = "rgba(80,40,20,0.4)";
+    ctx.fillStyle = cBodyDark;
+    for (let i = 0; i < 5; i += 1) {
+      const a = -0.5 + i * 0.35;
       ctx.beginPath();
-      ctx.ellipse(18, 6, 10, 4, 0, 0, Math.PI * 2);
+      ctx.arc(Math.cos(a) * 15 - 2, Math.sin(a) * 11 + 5, 3.2, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = cSnout;
-      ctx.beginPath();
-      ctx.ellipse(19, 3, 10, 6, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = cBodyMid;
-      ctx.beginPath();
-      ctx.ellipse(15, -1, 9, 3.5, -0.1, 0, Math.PI * 2);
-      ctx.fill();
+    }
 
-      ctx.fillStyle = "#0a0a0a";
-      ctx.beginPath();
-      ctx.ellipse(27, 1, 2.6, 2, -0.2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "rgba(255,255,255,0.5)";
-      ctx.beginPath();
-      ctx.arc(26.2, 0.2, 0.7, 0, Math.PI * 2);
-      ctx.fill();
+    ctx.fillStyle = cBelly;
+    ctx.beginPath();
+    ctx.ellipse(-2, 14, 11, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
 
-      ctx.fillStyle = "rgba(20,10,5,0.7)";
-      ctx.beginPath();
-      ctx.ellipse(15, -2.8, 3.6, 2.8, -0.12, 0, Math.PI * 2);
-      ctx.ellipse(8, -2.8, 3.4, 2.6, 0.12, 0, Math.PI * 2);
-      ctx.fill();
+    ctx.fillStyle = cBodyDark;
+    ctx.beginPath();
+    ctx.ellipse(3, 19, 4.5, 3.2, 0, 0, Math.PI * 2);
+    ctx.ellipse(-7, 20, 4.5, 3.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#1a1a1a";
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(1, 20); ctx.lineTo(0, 22.5);
+    ctx.moveTo(3, 20); ctx.lineTo(3, 22.7);
+    ctx.moveTo(5, 20); ctx.lineTo(6, 22.5);
+    ctx.moveTo(-9, 21); ctx.lineTo(-10, 23.3);
+    ctx.moveTo(-7, 21); ctx.lineTo(-7, 23.5);
+    ctx.moveTo(-5, 21); ctx.lineTo(-4, 23.3);
+    ctx.stroke();
 
-      ctx.fillStyle = "#ffffff";
-      ctx.beginPath();
-      ctx.ellipse(15, -3, 3.2, 2.4, -0.12, 0, Math.PI * 2);
-      ctx.ellipse(8, -3, 3.0, 2.3, 0.12, 0, Math.PI * 2);
-      ctx.fill();
+    ctx.fillStyle = cBodyLight;
+    ctx.beginPath();
+    ctx.ellipse(5, 4, 12, 9, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = cBelly;
+    ctx.beginPath();
+    ctx.ellipse(7, 6, 7, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
 
-      ctx.fillStyle = "#7a4a14";
-      ctx.beginPath();
-      ctx.ellipse(15, -2.6, 2.6, 2.2, -0.12, 0, Math.PI * 2);
-      ctx.ellipse(8, -2.6, 2.4, 2.1, 0.12, 0, Math.PI * 2);
-      ctx.fill();
+    ctx.fillStyle = cBodyMid;
+    ctx.beginPath();
+    ctx.ellipse(10, -3, 14, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = cBodyDark;
+    ctx.beginPath();
+    ctx.ellipse(10, -9, 11, 5, 0, 0, Math.PI);
+    ctx.fill();
+    ctx.fillStyle = cBodyLight;
+    ctx.beginPath();
+    ctx.ellipse(11, -1, 11, 9, 0, 0, Math.PI * 2);
+    ctx.fill();
 
-      ctx.fillStyle = "#e8b440";
-      ctx.beginPath();
-      ctx.ellipse(15, -2.4, 2.0, 1.8, -0.12, 0, Math.PI * 2);
-      ctx.ellipse(8, -2.4, 1.9, 1.7, 0.12, 0, Math.PI * 2);
-      ctx.fill();
+    ctx.fillStyle = cBodyDark;
+    ctx.beginPath();
+    ctx.moveTo(2, -9); ctx.lineTo(-2, -22); ctx.lineTo(9, -11); ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = cEarInner;
+    ctx.beginPath();
+    ctx.moveTo(3, -11); ctx.lineTo(0, -19); ctx.lineTo(7, -12); ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = cBodyMid;
+    ctx.beginPath();
+    ctx.moveTo(13, -9); ctx.lineTo(18, -24); ctx.lineTo(9, -11); ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = cBodyLight;
+    ctx.beginPath();
+    ctx.moveTo(14, -10); ctx.lineTo(17, -22); ctx.lineTo(11, -11); ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = cEarInner;
+    ctx.beginPath();
+    ctx.moveTo(15, -11); ctx.lineTo(16, -20); ctx.lineTo(12, -12); ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(17, -22, 1.3, 0, Math.PI * 2);
+    ctx.arc(-2, -21, 1.1, 0, Math.PI * 2);
+    ctx.fill();
 
-      ctx.fillStyle = "#0a0a0a";
-      ctx.beginPath();
-      ctx.ellipse(15, -2.4, 0.75, 2.0, -0.12, 0, Math.PI * 2);
-      ctx.ellipse(8, -2.4, 0.7, 1.9, 0.12, 0, Math.PI * 2);
-      ctx.fill();
+    ctx.fillStyle = "rgba(80,40,20,0.4)";
+    ctx.beginPath();
+    ctx.ellipse(18, 6, 10, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = cSnout;
+    ctx.beginPath();
+    ctx.ellipse(19, 3, 10, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = cBodyMid;
+    ctx.beginPath();
+    ctx.ellipse(15, -1, 9, 3.5, -0.1, 0, Math.PI * 2);
+    ctx.fill();
 
-      ctx.fillStyle = "#ffffff";
-      ctx.beginPath();
-      ctx.arc(16.0, -3.6, 0.7, 0, Math.PI * 2);
-      ctx.arc(9.0, -3.6, 0.65, 0, Math.PI * 2);
-      ctx.fill();
+    ctx.fillStyle = "#0a0a0a";
+    ctx.beginPath();
+    ctx.ellipse(27, 1, 2.6, 2, -0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    ctx.beginPath();
+    ctx.arc(26.2, 0.2, 0.7, 0, Math.PI * 2);
+    ctx.fill();
 
-      ctx.strokeStyle = "rgba(40,20,10,0.8)";
-      ctx.lineWidth = 1.0;
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(11.4, -4.8); ctx.lineTo(18.6, -4.6);
-      ctx.moveTo(4.6, -4.6); ctx.lineTo(11.0, -4.7);
-      ctx.stroke();
-      ctx.lineCap = "butt";
+    ctx.fillStyle = "rgba(20,10,5,0.7)";
+    ctx.beginPath();
+    ctx.ellipse(15, -2.8, 3.6, 2.8, -0.12, 0, Math.PI * 2);
+    ctx.ellipse(8, -2.8, 3.4, 2.6, 0.12, 0, Math.PI * 2);
+    ctx.fill();
 
-      ctx.strokeStyle = cBodyDark;
-      ctx.lineWidth = 1.6;
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(11, -7); ctx.lineTo(18, -5.5);
-      ctx.moveTo(4, -6.5); ctx.lineTo(11, -6);
-      ctx.stroke();
-      ctx.lineCap = "butt";
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.ellipse(15, -3, 3.2, 2.4, -0.12, 0, Math.PI * 2);
+    ctx.ellipse(8, -3, 3.0, 2.3, 0.12, 0, Math.PI * 2);
+    ctx.fill();
 
+    ctx.fillStyle = "#7a4a14";
+    ctx.beginPath();
+    ctx.ellipse(15, -2.6, 2.6, 2.2, -0.12, 0, Math.PI * 2);
+    ctx.ellipse(8, -2.6, 2.4, 2.1, 0.12, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#e8b440";
+    ctx.beginPath();
+    ctx.ellipse(15, -2.4, 2.0, 1.8, -0.12, 0, Math.PI * 2);
+    ctx.ellipse(8, -2.4, 1.9, 1.7, 0.12, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#0a0a0a";
+    ctx.beginPath();
+    ctx.ellipse(15, -2.4, 0.75, 2.0, -0.12, 0, Math.PI * 2);
+    ctx.ellipse(8, -2.4, 0.7, 1.9, 0.12, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(16.0, -3.6, 0.7, 0, Math.PI * 2);
+    ctx.arc(9.0, -3.6, 0.65, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(40,20,10,0.8)";
+    ctx.lineWidth = 1.0;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(11.4, -4.8); ctx.lineTo(18.6, -4.6);
+    ctx.moveTo(4.6, -4.6); ctx.lineTo(11.0, -4.7);
+    ctx.stroke();
+    ctx.lineCap = "butt";
+
+    ctx.strokeStyle = cBodyDark;
+    ctx.lineWidth = 1.6;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(11, -7); ctx.lineTo(18, -5.5);
+    ctx.moveTo(4, -6.5); ctx.lineTo(11, -6);
+    ctx.stroke();
+    ctx.lineCap = "butt";
+
+    if (!omitSmile) {
       ctx.strokeStyle = "#0a0604";
       ctx.lineWidth = 1.1;
       ctx.lineCap = "round";
@@ -5305,79 +5357,147 @@
       ctx.beginPath();
       ctx.moveTo(20.5, 6.0); ctx.lineTo(20.9, 7.6); ctx.lineTo(21.3, 6.0);
       ctx.stroke();
-
-      ctx.strokeStyle = "rgba(40,20,10,0.7)";
-      ctx.lineWidth = 0.5;
+    } else {
+      ctx.strokeStyle = "#0a0604";
+      ctx.lineWidth = 1.2;
+      ctx.lineCap = "round";
       ctx.beginPath();
-      ctx.moveTo(22, 2); ctx.lineTo(32, 0);
-      ctx.moveTo(22, 3.2); ctx.lineTo(32, 3);
-      ctx.moveTo(22, 4.4); ctx.lineTo(32, 6);
-      ctx.moveTo(15, 5); ctx.lineTo(11, 7);
+      ctx.moveTo(22.5, 5.6);
+      ctx.lineTo(13, 5.6);
+      ctx.stroke();
+      ctx.lineCap = "butt";
+    }
+
+    ctx.strokeStyle = "rgba(40,20,10,0.7)";
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(22, 2); ctx.lineTo(32, 0);
+    ctx.moveTo(22, 3.2); ctx.lineTo(32, 3);
+    ctx.moveTo(22, 4.4); ctx.lineTo(32, 6);
+    ctx.moveTo(15, 5); ctx.lineTo(11, 7);
+    ctx.stroke();
+
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.arc(4, 4, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = cBelly;
+    ctx.beginPath();
+    ctx.arc(4, 4, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.arc(2, 7, 2, 0, Math.PI * 2);
+    ctx.arc(1, 3, 1.6, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (crown) {
+      ctx.save();
+      ctx.fillStyle = "#a07020";
+      ctx.beginPath();
+      ctx.ellipse(8, -10.5, 9.5, 2.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#e8c040";
+      ctx.beginPath();
+      ctx.moveTo(-1.5, -11.5);
+      ctx.lineTo(17.5, -11.5);
+      ctx.lineTo(17.5, -14);
+      ctx.lineTo(14.5, -19);
+      ctx.lineTo(11.5, -14);
+      ctx.lineTo(8, -21);
+      ctx.lineTo(4.5, -14);
+      ctx.lineTo(1.5, -19);
+      ctx.lineTo(-1.5, -14);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = "#a07020";
+      ctx.lineWidth = 0.7;
       ctx.stroke();
 
-      ctx.fillStyle = "#fff";
+      ctx.fillStyle = "#fff5b0";
       ctx.beginPath();
-      ctx.arc(4, 4, 3.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = cBelly;
-      ctx.beginPath();
-      ctx.arc(4, 4, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#fff";
-      ctx.beginPath();
-      ctx.arc(2, 7, 2, 0, Math.PI * 2);
-      ctx.arc(1, 3, 1.6, 0, Math.PI * 2);
+      ctx.moveTo(-0.5, -12);
+      ctx.lineTo(17, -12);
+      ctx.lineTo(17, -13.2);
+      ctx.lineTo(-0.5, -13.2);
+      ctx.closePath();
       ctx.fill();
 
-      if (fox.throwTimer < 30 && fox.life > 60) {
-        ctx.save();
-        ctx.translate(22, 9);
-        ctx.rotate(-0.18);
-        ctx.fillStyle = "#2a1808";
-        ctx.fillRect(-2, -3.2, 12, 6.4);
-        ctx.fillStyle = "#6a4828";
-        ctx.fillRect(-2, -3.2, 12, 2.2);
-        ctx.fillStyle = "#a87a4a";
-        ctx.fillRect(-2, -3.2, 12, 0.9);
-        ctx.fillStyle = "#2a1808";
-        ctx.beginPath();
-        ctx.arc(-2, 0, 2.8, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "#7a5028";
-        ctx.beginPath();
-        ctx.arc(-2, -0.6, 1.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "#d8a428";
-        ctx.beginPath();
-        ctx.arc(2, 0, 0.8, 0, Math.PI * 2);
-        ctx.arc(7, 0, 0.8, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "#6a5028";
-        ctx.fillRect(10, -5.2, 2.6, 10.4);
-        ctx.fillStyle = "#b8a060";
-        ctx.fillRect(10, -5.2, 1.4, 10.4);
-        ctx.fillStyle = "#aab0b8";
-        ctx.beginPath();
-        ctx.moveTo(12.6, -4.4); ctx.lineTo(30, 0); ctx.lineTo(12.6, 4.4); ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = "#dde2e8";
-        ctx.beginPath();
-        ctx.moveTo(12.6, -3.0); ctx.lineTo(26, 0); ctx.lineTo(12.6, 3.0); ctx.closePath();
-        ctx.fill();
-        ctx.strokeStyle = "rgba(70,75,85,0.7)";
-        ctx.lineWidth = 0.7;
-        ctx.beginPath();
-        ctx.moveTo(13.5, 0); ctx.lineTo(27, 0);
-        ctx.stroke();
-        ctx.fillStyle = "#ffffff";
-        ctx.beginPath();
-        ctx.moveTo(12.6, -1.6); ctx.lineTo(23, -0.2); ctx.lineTo(12.6, -0.4); ctx.closePath();
-        ctx.fill();
-        ctx.restore();
-      }
+      ctx.fillStyle = "#e83040";
+      ctx.beginPath();
+      ctx.arc(8, -20, 1.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#ff8090";
+      ctx.beginPath();
+      ctx.arc(7.4, -20.4, 0.5, 0, Math.PI * 2);
+      ctx.fill();
 
+      ctx.fillStyle = "#3080e8";
+      ctx.beginPath();
+      ctx.arc(14.5, -18.2, 1.0, 0, Math.PI * 2);
+      ctx.arc(1.5, -18.2, 1.0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#80c0ff";
+      ctx.beginPath();
+      ctx.arc(14.2, -18.5, 0.35, 0, Math.PI * 2);
+      ctx.arc(1.2, -18.5, 0.35, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(255,255,255,0.75)";
+      ctx.fillRect(0.5, -12.7, 8, 0.4);
       ctx.restore();
     }
+
+    ctx.restore();
+  }
+
+  function drawFoxKnife() {
+    ctx.save();
+    ctx.translate(22, 9);
+    ctx.rotate(-0.18);
+    ctx.fillStyle = "#2a1808";
+    ctx.fillRect(-2, -3.2, 12, 6.4);
+    ctx.fillStyle = "#6a4828";
+    ctx.fillRect(-2, -3.2, 12, 2.2);
+    ctx.fillStyle = "#a87a4a";
+    ctx.fillRect(-2, -3.2, 12, 0.9);
+    ctx.fillStyle = "#2a1808";
+    ctx.beginPath();
+    ctx.arc(-2, 0, 2.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#7a5028";
+    ctx.beginPath();
+    ctx.arc(-2, -0.6, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#d8a428";
+    ctx.beginPath();
+    ctx.arc(2, 0, 0.8, 0, Math.PI * 2);
+    ctx.arc(7, 0, 0.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#6a5028";
+    ctx.fillRect(10, -5.2, 2.6, 10.4);
+    ctx.fillStyle = "#b8a060";
+    ctx.fillRect(10, -5.2, 1.4, 10.4);
+    ctx.fillStyle = "#aab0b8";
+    ctx.beginPath();
+    ctx.moveTo(12.6, -4.4); ctx.lineTo(30, 0); ctx.lineTo(12.6, 4.4); ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#dde2e8";
+    ctx.beginPath();
+    ctx.moveTo(12.6, -3.0); ctx.lineTo(26, 0); ctx.lineTo(12.6, 3.0); ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "rgba(70,75,85,0.7)";
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(13.5, 0); ctx.lineTo(27, 0);
+    ctx.stroke();
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.moveTo(12.6, -1.6); ctx.lineTo(23, -0.2); ctx.lineTo(12.6, -0.4); ctx.closePath();
+    ctx.fill();
+    ctx.restore();
   }
 
   function drawSquirrels() {
