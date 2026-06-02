@@ -699,7 +699,7 @@
       hp: 4 + bossIndex,
       maxHp: 4 + bossIndex,
       phase: "idle",
-      phaseTimer: 90,
+      phaseTimer: 180,
       aimAngle: Math.PI / 2,
       laserAngle: Math.PI / 2,
       laserPower: 0,
@@ -1009,18 +1009,18 @@
     const targetAngle = Math.atan2(player.y - bossFox.y, player.x - bossFox.x);
     if (bossFox.phase === "idle" || bossFox.phase === "aim") {
       const diff = ((targetAngle - bossFox.aimAngle + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-      bossFox.aimAngle += diff * (bossFox.phase === "aim" ? 0.08 : 0.04);
+      bossFox.aimAngle += diff * (bossFox.phase === "aim" ? 0.05 : 0.03);
     }
 
     if (bossFox.phase === "idle" && bossFox.phaseTimer <= 0) {
       bossFox.phase = "aim";
-      bossFox.phaseTimer = 70;
+      bossFox.phaseTimer = 95;
       bossFox.laserAngle = bossFox.aimAngle;
     } else if (bossFox.phase === "aim") {
       bossFox.laserAngle = bossFox.aimAngle;
       if (bossFox.phaseTimer <= 0) {
         bossFox.phase = "fire";
-        bossFox.phaseTimer = 45;
+        bossFox.phaseTimer = 40;
         bossFox.laserPower = 1;
         bossFox.shakeT = 1;
         playSnort(0.6, 0.4);
@@ -1037,19 +1037,13 @@
         const cx = bossFox.x + dx * t;
         const cy = bossFox.y + dy * t;
         const d = Math.hypot(player.x - cx, player.y - cy);
-        if (d < 16 + player.w * 0.3) {
-          if (player.shieldTimer <= 0 && player.rocketTimer <= 0) {
-            player.lives = 0;
-            spawnSparkles(player.x, player.y);
-            endGame();
-          } else {
-            spawnShieldHit(player.x, player.y);
-          }
+        if (d < 14 + player.w * 0.25) {
+          damagePlayer();
         }
       }
       if (bossFox.phaseTimer <= 0) {
         bossFox.phase = "idle";
-        bossFox.phaseTimer = 80 + Math.random() * 40;
+        bossFox.phaseTimer = 140 + Math.random() * 60;
         bossFox.laserPower = 0;
       }
     }
