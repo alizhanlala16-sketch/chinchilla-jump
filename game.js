@@ -59,7 +59,7 @@
     },
     white: {
       tailDark: "#d0ccc8", tailMid: "#e2deda", tailTuft: "#eeeae6", tailTip: "#faf8f6", tailShadow: "rgba(120,110,100,0.22)",
-      bodyDark: "#d8d4d0", bodyTuft: "#e6e2de", bodyMid: "#f0ece8", belly: "#faf8f6",
+      bodyDark: "#d8d4d0", bodyTuft: "#e6e2de", bodyMid: "#f0ece8", belly: "#3a3838",
       legOuter: "#e0dcd8", legInner: "#ece8e4",
       earL1: "#d4d0cc", earL2: "#e4e0dc", earL3: "#f0d8d4",
       earR1: "#e0dcd8", earR2: "#ece8e4", earR3: "#f8e8e4", earRInner: "rgba(200,140,130,0.45)",
