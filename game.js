@@ -77,7 +77,39 @@
       cheekOuter: "#2c2a28", cheekInner: "#3a3836", muzzle: "#504e4c",
       whisker: "rgba(200,190,180,0.35)", blush: "rgba(180,90,90,0.35)",
     },
+    rainbow: {
+      tailDark: "#9b5de5", tailMid: "#c77dff", tailTuft: "#e0aaff", tailTip: "#ffd6ff", tailShadow: "rgba(120,60,180,0.30)",
+      bodyDark: "#4ea8de", bodyTuft: "#62d0ff", bodyMid: "#7ee8fa", belly: "#fef9ff",
+      legOuter: "#5fa8e6", legInner: "#8fd9f2",
+      earL1: "#ff7eb6", earL2: "#ff9ccf", earL3: "#ffd1e8",
+      earR1: "#ffb347", earR2: "#ffd27a", earR3: "#ffe8b0", earRInner: "rgba(220,120,60,0.5)",
+      headDark: "#56cfa3", headMid: "#7ee8c0", headLight: "#b8f5dd",
+      cheekOuter: "#ff9ccf", cheekInner: "#ffc2e0", muzzle: "#fff6fb",
+      whisker: "rgba(90,70,110,0.7)", blush: "rgba(255,140,170,0.55)",
+    },
   };
+
+  const RAINBOW_KEY = "chinchilla-rainbow-unlocked";
+  function isRainbowUnlocked() {
+    try { return localStorage.getItem(RAINBOW_KEY) === "1"; } catch (e) { return false; }
+  }
+  function unlockRainbow() {
+    try { localStorage.setItem(RAINBOW_KEY, "1"); } catch (e) {}
+    refreshRainbowButton();
+  }
+  function refreshRainbowButton() {
+    const btn = document.querySelector('#skin-options .cosmetic-btn[data-skin="rainbow"]');
+    if (!btn) return;
+    if (isRainbowUnlocked()) {
+      btn.classList.remove("locked");
+      btn.disabled = false;
+      btn.textContent = "Радужная";
+    } else {
+      btn.classList.add("locked");
+      btn.disabled = true;
+      btn.textContent = "🔒 Радужная";
+    }
+  }
 
   const CHIN_HATS = { none: "none", gentleman: "gentleman", bear: "bear" };
 
@@ -90,6 +122,7 @@
   }
 
   let selectedSkin = loadCosmetic(SKIN_KEY, CHIN_SKINS, "standard");
+  if (selectedSkin === "rainbow" && !isRainbowUnlocked()) selectedSkin = "standard";
   let selectedHat = loadCosmetic(HAT_KEY, CHIN_HATS, "none");
 
   function getSkinPalette() {
@@ -98,6 +131,7 @@
 
   function setSelectedSkin(id) {
     if (!CHIN_SKINS[id]) return;
+    if (id === "rainbow" && !isRainbowUnlocked()) return;
     selectedSkin = id;
     try { localStorage.setItem(SKIN_KEY, id); } catch (e) {}
     updateCosmeticUi();
@@ -168,6 +202,7 @@
     document.querySelectorAll("#hat-options .cosmetic-btn").forEach(function (btn) {
       btn.addEventListener("click", function () { setSelectedHat(btn.dataset.hat); });
     });
+    refreshRainbowButton();
     updateCosmeticUi();
   }
 
@@ -1037,7 +1072,7 @@
   }
 
   function updateBossFox() {
-    if (gameMode !== "levels") return;
+    if (gameMode !== "levels" && !secretBoss) return;
     if (!bossFox || bossFox.dead) return;
     if (state !== "playing" || levelTransitionTimer > 0) return;
 
@@ -1119,11 +1154,13 @@
           for (let i = 0; i < 6; i += 1) {
             spawnSparkles(bossFox.x + rand(-30, 30), bossFox.y + rand(-30, 30));
           }
-          if (portal) {
+          score += 200;
+          if (secretBoss) {
+            onSecretBossDefeated();
+          } else if (portal) {
             portal.hidden = false;
             portal.active = true;
           }
-          score += 200;
         } else {
           startBossEscape();
         }
@@ -1133,7 +1170,7 @@
   }
 
   function drawBossHpBar() {
-    if (gameMode !== "levels") return;
+    if (gameMode !== "levels" && !secretBoss) return;
     if (!bossFox || bossFox.dead) return;
     const barW = W * 0.7;
     const barH = 14;
@@ -1166,7 +1203,7 @@
   }
 
   function drawBossFox() {
-    if (gameMode !== "levels") return;
+    if (gameMode !== "levels" && !secretBoss) return;
     if (!bossFox || bossFox.dead) return;
     const sy = bossFox.y - cameraY;
     if (sy < -300 || sy > H + 300) return;
@@ -1443,6 +1480,11 @@
   let rockets = [];
   let shields = [];
   let lasers = [];
+  let chests = [];
+  let nextChestHeight = 2000;
+  let paused = false;
+  let secretBoss = false;
+  let cutscene = null;
 
   const forestTreesFar = [];
   const forestTreesNear = [];
@@ -1596,6 +1638,11 @@
     bossFox = null;
     snake = null;
     lastSnakeSpawn = 0;
+    chests = [];
+    nextChestHeight = 2000;
+    paused = false;
+    secretBoss = false;
+    cutscene = null;
 
     if (gameMode === "levels") {
       initLevelWorld(levelProgress);
@@ -2072,6 +2119,12 @@
       }
     }
 
+    if (maxHeight >= nextChestHeight && chests.length === 0) {
+      spawnChest();
+      nextChestHeight += 2000;
+    }
+    chests = chests.filter((c) => c.y < cameraY + H + 200);
+
     saws = saws.filter((s) => !s.dead && s.y < cameraY + H + 200);
     foxes = foxes.filter((f) => f.y < cameraY + H + 200 && f.life > 0);
     cannons = cannons.filter((c) => !c.dead && c.y < cameraY + H + 200 && c.life > 0);
@@ -2084,6 +2137,118 @@
       k.x > -30 && k.x < W + 30 &&
       k.y - cameraY > -30 && k.y - cameraY < H + 30
     );
+  }
+
+  function spawnChest() {
+    let best = null;
+    for (const p of platforms) {
+      if (p.broken) continue;
+      if (p.type === "fragile" || p.type === "moving") continue;
+      if (!best || p.y < best.y) best = p;
+    }
+    if (!best) return;
+    chests.push({
+      platform: best,
+      x: best.x + best.w / 2,
+      y: best.y - 18,
+      bob: Math.random() * Math.PI * 2,
+      opened: false,
+      openT: 0,
+    });
+  }
+
+  function updateChests() {
+    for (const chest of chests) {
+      chest.bob += 0.06;
+      if (chest.platform && !chest.platform.broken) {
+        chest.x = chest.platform.x + chest.platform.w / 2;
+        chest.y = chest.platform.y - 18;
+      }
+      if (chest.opened) {
+        if (chest.openT < 1) chest.openT = Math.min(1, chest.openT + 0.08);
+        continue;
+      }
+      const dx = player.x - chest.x;
+      const dy = player.y - chest.y;
+      if (Math.hypot(dx, dy) < player.w * 0.55 + 16) {
+        chest.opened = true;
+        chest.openT = 0;
+        spawnSparkles(chest.x, chest.y - 6);
+        for (let i = 0; i < 14; i += 1) {
+          const a = (i / 14) * Math.PI * 2;
+          particles.push({
+            x: chest.x, y: chest.y - 6,
+            vx: Math.cos(a) * 2.6, vy: Math.sin(a) * 2.6 - 1.4,
+            life: 50, maxLife: 50,
+            color: "rgba(255,220,120,0.95)", size: rand(2.5, 4),
+          });
+        }
+        playSnort(1.8, 0.3);
+        openChestModal();
+      }
+    }
+  }
+
+  function drawChests() {
+    for (const chest of chests) {
+      const sy = chest.y - cameraY;
+      if (sy < -60 || sy > H + 60) continue;
+      const bob = chest.opened ? 0 : Math.sin(chest.bob) * 2;
+      ctx.save();
+      ctx.translate(chest.x, sy + bob);
+
+      ctx.fillStyle = "rgba(0,0,0,0.25)";
+      ctx.beginPath();
+      ctx.ellipse(0, 16, 18, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#1e5a8a";
+      ctx.fillRect(-16, -2, 32, 18);
+      ctx.fillStyle = "#2f7bb5";
+      ctx.fillRect(-16, 0, 32, 6);
+      ctx.fillStyle = "#143f63";
+      ctx.fillRect(-16, 10, 32, 3);
+
+      ctx.fillStyle = "#bcd6ec";
+      ctx.fillRect(-16, -2, 4, 18);
+      ctx.fillRect(12, -2, 4, 18);
+      ctx.fillRect(-16, 6, 32, 3);
+
+      const lidOpen = chest.opened ? chest.openT : 0;
+      ctx.save();
+      ctx.translate(0, -2);
+      ctx.rotate(-lidOpen * 1.5);
+      ctx.fillStyle = "#2769a0";
+      ctx.beginPath();
+      ctx.moveTo(-16, 0);
+      ctx.lineTo(16, 0);
+      ctx.lineTo(16, -6);
+      ctx.quadraticCurveTo(0, -16, -16, -6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#bcd6ec";
+      ctx.fillRect(-16, -7, 32, 3);
+      ctx.fillStyle = "#7fb0d8";
+      ctx.fillRect(-16, -6, 4, 6);
+      ctx.fillRect(12, -6, 4, 6);
+      ctx.restore();
+
+      if (!chest.opened) {
+        ctx.fillStyle = "#ffe08a";
+        ctx.fillRect(-3, 4, 6, 7);
+        ctx.fillStyle = "#3a2410";
+        ctx.beginPath();
+        ctx.arc(0, 6, 1.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillRect(-0.6, 6, 1.2, 3);
+      } else {
+        ctx.fillStyle = "rgba(255,230,140," + (0.4 + Math.sin(chest.bob * 2) * 0.2).toFixed(2) + ")";
+        ctx.beginPath();
+        ctx.arc(0, 2, 7 + lidOpen * 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
   }
 
   function updateSaws() {
@@ -2653,6 +2818,10 @@
       } else if (targetCameraY < cameraY) {
         cameraY = targetCameraY;
       }
+    } else if (secretBoss) {
+      cameraX = 0;
+      const targetCameraY = player.y - (H - HUD_SAFE_BOTTOM - 120);
+      cameraY += (targetCameraY - cameraY) * 0.12;
     } else if (gameMode !== "levels") {
       cameraX = 0;
       const targetCameraY = player.y - CAMERA_FOLLOW;
@@ -2839,6 +3008,34 @@
       try { inp.focus(); } catch (e) {}
     }
     if (hint) hint.classList.remove("hidden");
+  }
+
+  const MORSE_DIGITS = { "0": "-----", "1": ".----", "2": "..---", "3": "...--", "4": "....-", "5": ".....", "6": "-....", "7": "--...", "8": "---..", "9": "----." };
+  function openChestModal() {
+    paused = true;
+    const box = document.getElementById("morse-box");
+    if (box) {
+      box.innerHTML = "";
+      const code = "3331";
+      for (const ch of code) {
+        const seq = MORSE_DIGITS[ch] || "";
+        const group = document.createElement("div");
+        group.className = "morse-group";
+        for (const sym of seq) {
+          const s = document.createElement("span");
+          s.className = sym === "." ? "morse-dot" : "morse-dash";
+          group.appendChild(s);
+        }
+        box.appendChild(group);
+      }
+    }
+    const modal = document.getElementById("chest-modal");
+    if (modal) { modal.classList.remove("hidden"); modal.classList.add("visible"); }
+  }
+  function closeChestModal() {
+    const modal = document.getElementById("chest-modal");
+    if (modal) { modal.classList.add("hidden"); modal.classList.remove("visible"); }
+    paused = false;
   }
 
   function getLeaderboardLocal() {
@@ -3285,6 +3482,12 @@
 
   function startGame(mode) {
     if (mode !== "levels" && mode !== "arcade") return;
+    const inp = getPlayerNameInputEl();
+    if (inp && inp.value.trim() === "3331") {
+      inp.value = "";
+      startSecretSequence();
+      return;
+    }
     lastGameMode = mode;
     if (startLevelsBtn) startLevelsBtn.classList.toggle("mode-selected", mode === "levels");
     if (startArcadeBtn) startArcadeBtn.classList.toggle("mode-selected", mode === "arcade");
@@ -3294,6 +3497,134 @@
       return;
     }
     actuallyStartGame(mode);
+  }
+
+  const CUTSCENE_PHASES = [190, 260, 340, 270, 210];
+  function startSecretSequence() {
+    if (document.activeElement && document.activeElement.blur) {
+      try { document.activeElement.blur(); } catch (e) {}
+    }
+    gameMode = "arcade";
+    secretBoss = false;
+    paused = false;
+    cutscene = { phase: 0, t: 0, runners: [] };
+    for (let i = 0; i < 4; i += 1) {
+      cutscene.runners.push({ skin: ["standard", "white", "black", "rainbow"][i], phase: Math.random() * Math.PI * 2 });
+    }
+    state = "cutscene";
+    overlay.classList.remove("visible");
+    overlay.classList.add("hidden");
+    gameoverEl.classList.remove("visible");
+    gameoverEl.classList.add("hidden");
+    setPlayingUi(true);
+    startMusic();
+  }
+
+  function advanceCutscene() {
+    if (!cutscene) return;
+    cutscene.phase += 1;
+    cutscene.t = 0;
+    if (cutscene.phase >= CUTSCENE_PHASES.length) startSecretBoss();
+  }
+
+  function updateCutscene() {
+    if (!cutscene) return;
+    cutscene.t += 1;
+    if (cutscene.t >= CUTSCENE_PHASES[cutscene.phase]) advanceCutscene();
+  }
+
+  function startSecretBoss() {
+    cutscene = null;
+    gameMode = "arcade";
+    secretBoss = true;
+    paused = false;
+    cameraX = 0;
+    cameraY = 0;
+    score = 0;
+    maxHeight = 0;
+    particles = [];
+    platforms = [];
+    hays = [];
+    saws = [];
+    foxes = [];
+    knives = [];
+    cannons = [];
+    cannonballs = [];
+    snake = null;
+    squirrels = [];
+    apples = [];
+    rockets = [];
+    shields = [];
+    lasers = [];
+    chests = [];
+    portal = null;
+    player.lives = 3;
+    player.invincibleTimer = 0;
+    player.rocketTimer = 0;
+    player.shieldTimer = 0;
+    player.laserTimer = 0;
+    player.vx = 0;
+    player.vy = 0;
+    player.facing = 1;
+    player.squash = 1;
+    player.jumpsLeft = 2;
+    player.standingOn = null;
+
+    worldWidth = W;
+    const arenaBottomY = H - 60;
+    const bossY = 170;
+    platforms.push(makePlatform(W / 2 - 90, arenaBottomY, 180, "grass"));
+    const rows = 4;
+    const rowGap = (arenaBottomY - (bossY + 90)) / (rows + 1);
+    let prev = W / 2;
+    for (let i = 1; i <= rows; i += 1) {
+      const y = arenaBottomY - i * rowGap;
+      const w = rand(95, 125);
+      const minC = Math.max(w / 2 + 18, prev - 150);
+      const maxC = Math.min(W - w / 2 - 18, prev + 150);
+      const cx = rand(minC, maxC);
+      platforms.push(makePlatform(cx - w / 2, y, w, i % 2 === 0 ? "log" : "grass"));
+      prev = cx;
+    }
+    platforms.push(makePlatform(W / 2 - 90, bossY + 40, 180, "log"));
+    const hp = 5;
+    bossFox = {
+      x: W / 2, y: bossY, hp: hp, maxHp: hp,
+      phase: "idle", phaseTimer: 80, escaping: false, escapeT: 0,
+      aimAngle: Math.PI / 2, laserAngle: Math.PI / 2, laserPower: 0,
+      shakeT: 0, dead: false, hitFlash: 0, bossIndex: 5,
+    };
+    player.x = W / 2;
+    player.y = arenaBottomY - 40;
+    highestPlatformY = bossY - 80;
+
+    state = "playing";
+    levelBannerText = "Лиса-король! Запрыгни ей на голову";
+    levelBannerTimer = 200;
+    updateHud();
+  }
+
+  function onSecretBossDefeated() {
+    unlockRainbow();
+    setSelectedSkin("rainbow");
+    secretBoss = false;
+    state = "over";
+    const modal = document.getElementById("secret-victory");
+    if (modal) { modal.classList.remove("hidden"); modal.classList.add("visible"); }
+  }
+
+  function closeSecretVictory() {
+    const modal = document.getElementById("secret-victory");
+    if (modal) { modal.classList.add("hidden"); modal.classList.remove("visible"); }
+    secretBoss = false;
+    bossFox = null;
+    state = "menu";
+    overlay.classList.remove("hidden");
+    overlay.classList.add("visible");
+    gameoverEl.classList.add("hidden");
+    setPlayingUi(false);
+    refreshRainbowButton();
+    updateCosmeticUi();
   }
 
   function actuallyStartGame(mode) {
@@ -3943,6 +4274,308 @@
       ctx.fill();
       ctx.globalAlpha = 1;
     }
+  }
+
+  function drawMiniChin(x, y, sc, palKey, t, flip) {
+    const pal = CHIN_SKINS[palKey] || CHIN_SKINS.standard;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(flip ? -sc : sc, sc);
+    drawChinchillaBody(ctx, pal, t, Math.sin(t * 0.2 + x) * 0.3, "none");
+    ctx.restore();
+  }
+
+  function drawScientist(x, y, sc, t) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(sc, sc);
+    const walk = Math.sin(t * 0.25 + x) * 3;
+    // legs
+    ctx.strokeStyle = "#2a3340";
+    ctx.lineWidth = 4;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(-4, 14); ctx.lineTo(-4 + walk, 26);
+    ctx.moveTo(4, 14); ctx.lineTo(4 - walk, 26);
+    ctx.stroke();
+    // lab coat
+    ctx.fillStyle = "#eef2f6";
+    ctx.beginPath();
+    ctx.moveTo(-10, -8);
+    ctx.lineTo(10, -8);
+    ctx.lineTo(8, 16);
+    ctx.lineTo(-8, 16);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#c4ccd4";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, -8); ctx.lineTo(0, 16);
+    ctx.stroke();
+    ctx.fillStyle = "#5fa8d8";
+    ctx.beginPath();
+    ctx.moveTo(-2, -8); ctx.lineTo(2, -8); ctx.lineTo(0, -2); ctx.closePath();
+    ctx.fill();
+    // arms
+    ctx.strokeStyle = "#eef2f6";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(-9, -5); ctx.lineTo(-14, 6);
+    ctx.moveTo(9, -5); ctx.lineTo(14, 6);
+    ctx.stroke();
+    // head
+    ctx.fillStyle = "#f0c9a8";
+    ctx.beginPath();
+    ctx.arc(0, -16, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#3a3530";
+    ctx.beginPath();
+    ctx.arc(0, -20, 8, Math.PI, 0);
+    ctx.fill();
+    // glasses
+    ctx.strokeStyle = "#222";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(-3, -16, 2.6, 0, Math.PI * 2);
+    ctx.arc(3, -16, 2.6, 0, Math.PI * 2);
+    ctx.moveTo(-0.4, -16); ctx.lineTo(0.4, -16);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(180,220,255,0.6)";
+    ctx.beginPath();
+    ctx.arc(-3, -16, 2, 0, Math.PI * 2);
+    ctx.arc(3, -16, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawCutsceneCaption(lines) {
+    const boxH = 14 + lines.length * 22;
+    ctx.fillStyle = "rgba(10,12,22,0.82)";
+    ctx.fillRect(0, H - boxH - 30, W, boxH);
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 17px Segoe UI, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (let i = 0; i < lines.length; i += 1) {
+      ctx.fillText(lines[i], W / 2, H - boxH - 30 + 18 + i * 22);
+    }
+    ctx.fillStyle = "rgba(255,224,138,0.85)";
+    ctx.font = "12px Segoe UI, sans-serif";
+    ctx.fillText("нажми / тапни, чтобы продолжить ▸", W / 2, H - 16);
+  }
+
+  function drawCutscene() {
+    if (!cutscene) return;
+    const phase = cutscene.phase;
+    const t = cutscene.t;
+    const gt = t * 0.06;
+
+    // background
+    const lab = phase <= 1;
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    if (lab) {
+      g.addColorStop(0, "#1a2230");
+      g.addColorStop(1, "#2c3a4c");
+    } else {
+      g.addColorStop(0, "#16261d");
+      g.addColorStop(0.5, "#27432f");
+      g.addColorStop(1, "#3a5f3f");
+    }
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    if (lab) {
+      ctx.strokeStyle = "rgba(120,160,200,0.12)";
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 6; i += 1) {
+        ctx.strokeRect(20 + i * 80, 60, 60, 80);
+      }
+      ctx.fillStyle = "rgba(120,200,255,0.10)";
+      for (let i = 0; i < 5; i += 1) {
+        ctx.fillRect(40 + i * 95, 150, 30, 50);
+      }
+    } else {
+      ctx.strokeStyle = "rgba(60,90,60,0.5)";
+      ctx.lineWidth = 8;
+      for (let i = 0; i < 5; i += 1) {
+        const by = 120 + i * 110;
+        ctx.beginPath();
+        ctx.moveTo(0, by);
+        ctx.lineTo(W, by - 30);
+        ctx.stroke();
+      }
+    }
+
+    if (phase === 0) {
+      drawScientist(W / 2 - 70, 220, 2.0, t);
+      drawScientist(W / 2 + 70, 220, 2.0, t + 30);
+      drawMiniChin(W / 2, 320, 1.2, "standard", t, false);
+      // cage bars
+      ctx.strokeStyle = "rgba(200,210,220,0.6)";
+      ctx.lineWidth = 2;
+      for (let i = -3; i <= 3; i += 1) {
+        ctx.beginPath();
+        ctx.moveTo(W / 2 + i * 12, 296);
+        ctx.lineTo(W / 2 + i * 12, 346);
+        ctx.stroke();
+      }
+      drawCutsceneCaption(["Лаборатория «Дикий Лес».", "Учёные ставят опыты над шиншиллами…"]);
+    } else if (phase === 1) {
+      drawScientist(60, 200, 2.1, t);
+      drawScientist(W - 60, 200, 2.1, t + 40);
+      // released fox
+      const fxx = 90 + Math.sin(gt) * 30;
+      drawCutsceneFox(fxx, 330, 1);
+      // released snake
+      drawCutsceneSnake(W - 120, 360, t);
+      drawCutsceneCaption(["Они выпустили лис и змей в лес!"]);
+    } else if (phase === 2) {
+      const flow = (t * 2.4) % (W + 120);
+      for (let i = 0; i < cutscene.runners.length; i += 1) {
+        const r = cutscene.runners[i];
+        const x = W - 40 - i * 46 - (i % 2) * 8;
+        const y = 180 + i * 60 + Math.sin(gt * 2 + r.phase) * 8;
+        drawMiniChin(x, y, 1.0, r.skin, t + i * 20, true);
+      }
+      drawCutsceneFox(W - 10 - (t * 1.5 % 120), 420, 1);
+      drawCutsceneSnake(40, 250, t);
+      // saws launched
+      for (let i = 0; i < 3; i += 1) {
+        const sx = ((t * 4 + i * 160) % (W + 80)) - 40;
+        drawCutsceneSaw(sx, 150 + i * 90, t);
+      }
+      drawCutsceneCaption(["Шиншиллы бросились бежать по веткам!"]);
+    } else if (phase === 3) {
+      drawScientist(W / 2 - 80, 230, 2.2, t * 0.3);
+      drawScientist(W / 2 + 80, 230, 2.2, t * 0.3 + 20);
+      // rainbow chin caught in net
+      const shake = Math.sin(t * 0.5) * 2;
+      drawMiniChin(W / 2 + shake, 250, 1.3, "rainbow", t, false);
+      ctx.strokeStyle = "rgba(230,235,245,0.7)";
+      ctx.lineWidth = 1.4;
+      for (let i = -4; i <= 4; i += 1) {
+        ctx.beginPath();
+        ctx.moveTo(W / 2 - 30 + i * 7, 210);
+        ctx.lineTo(W / 2 - 50 + i * 7, 300);
+        ctx.stroke();
+      }
+      for (let j = 0; j < 5; j += 1) {
+        ctx.beginPath();
+        ctx.moveTo(W / 2 - 50, 220 + j * 18);
+        ctx.lineTo(W / 2 + 50, 215 + j * 18);
+        ctx.stroke();
+      }
+      drawCutsceneCaption(["Учёные поймали радужную шиншиллу сетью…"]);
+    } else {
+      // call to action
+      ctx.fillStyle = "rgba(0,0,0,0.25)";
+      ctx.beginPath();
+      ctx.arc(W / 2, 200, 90 + Math.sin(gt) * 6, 0, Math.PI * 2);
+      ctx.fill();
+      drawMiniChin(W / 2 - 50, 230, 1.3, "standard", t, false);
+      drawCutsceneFoxKing(W / 2 + 50, 210, t);
+      drawCutsceneCaption(["Останови злодеев и освободи её!", "Впереди — босс лиса-король."]);
+    }
+  }
+
+  function drawCutsceneFox(x, y, dir) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(dir * 1.1, 1.1);
+    ctx.fillStyle = "#c5663a";
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 18, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(15, -6, 8, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#9a4220";
+    ctx.beginPath();
+    ctx.moveTo(11, -11); ctx.lineTo(13, -20); ctx.lineTo(17, -12); ctx.closePath();
+    ctx.moveTo(18, -11); ctx.lineTo(22, -19); ctx.lineTo(20, -10); ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#f5e0ce";
+    ctx.beginPath();
+    ctx.ellipse(22, -4, 5, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#0a0a0a";
+    ctx.beginPath();
+    ctx.arc(26, -5, 1.4, 0, Math.PI * 2);
+    ctx.arc(16, -7, 1.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#e88858";
+    ctx.beginPath();
+    ctx.ellipse(-18, -2, 8, 5, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.ellipse(-23, -4, 4, 3, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawCutsceneFoxKing(x, y, t) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(1.7, 1.7);
+    drawFoxBody({ facing: -1, omitSmile: true, crown: true });
+    ctx.restore();
+  }
+
+  function drawCutsceneSnake(x, y, t) {
+    ctx.save();
+    ctx.strokeStyle = "#2f6b34";
+    ctx.lineWidth = 9;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    for (let i = 0; i <= 20; i += 1) {
+      const px = x + i * 6;
+      const py = y + Math.sin(i * 0.6 + t * 0.15) * 10;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    ctx.fillStyle = "#3a7d40";
+    ctx.beginPath();
+    ctx.arc(x, y, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#ffe04a";
+    ctx.beginPath();
+    ctx.arc(x - 2, y - 2, 1.6, 0, Math.PI * 2);
+    ctx.arc(x + 2, y - 2, 1.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#e8304a";
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(x - 6, y + 2);
+    ctx.lineTo(x - 13, y + 2 + Math.sin(t * 0.4) * 3);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawCutsceneSaw(x, y, t) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(t * 0.3);
+    ctx.fillStyle = "#c4ccd4";
+    for (let i = 0; i < 8; i += 1) {
+      ctx.rotate(Math.PI / 4);
+      ctx.beginPath();
+      ctx.moveTo(0, -14);
+      ctx.lineTo(4, -8);
+      ctx.lineTo(-4, -8);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.fillStyle = "#8a949e";
+    ctx.beginPath();
+    ctx.arc(0, 0, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#5a646e";
+    ctx.beginPath();
+    ctx.arc(0, 0, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
 
   function drawDoubleJumpIndicator() {
@@ -6079,7 +6712,9 @@
     }
   }
 
-  function render() {    drawBackground();
+  function render() {
+    if (state === "cutscene") { drawCutscene(); return; }
+    drawBackground();
     ctx.save();
     ctx.translate(-cameraX, 0);
     drawFoxes();
@@ -6087,6 +6722,7 @@
     drawSquirrels();
     drawHay();
     drawApples();
+    drawChests();
     drawRockets();
     drawShields();
     drawLasers();
@@ -6114,11 +6750,14 @@
 
   function update() {
     updateBackgroundLeaves();
+    if (state === "cutscene") { updateCutscene(); return; }
     if (state !== "playing") return;
+    if (paused) return;
     updatePlatforms();
     updatePlayer();
     updateHays();
     updateApples();
+    updateChests();
     updateRockets();
     updateShields();
     updateLasers();
@@ -6130,7 +6769,9 @@
     updateSnake();
     updateSquirrels();
     updateParticles();
-    if (gameMode === "levels") {
+    if (secretBoss) {
+      updateBossFox();
+    } else if (gameMode === "levels") {
       updateBossFox();
       updateLevelTransition();
     } else {
@@ -6147,9 +6788,11 @@
   }
 
   function isModalOpen() {
-    const lb = document.getElementById("leaderboard");
-    const np = document.getElementById("name-prompt");
-    return (lb && !lb.classList.contains("hidden")) || (np && !np.classList.contains("hidden"));
+    const ids = ["leaderboard", "name-prompt", "chest-modal", "secret-victory"];
+    return ids.some(function (id) {
+      const el = document.getElementById(id);
+      return el && !el.classList.contains("hidden");
+    });
   }
 
   function isTextInputFocused() {
@@ -6161,6 +6804,13 @@
 
   window.addEventListener("keydown", (e) => {
     if (isTextInputFocused() || isModalOpen()) return;
+    if (state === "cutscene") {
+      if (e.key === " " || e.key === "Enter" || e.key === "ArrowUp" || e.key === "ArrowRight") {
+        e.preventDefault();
+        advanceCutscene();
+      }
+      return;
+    }
     keys.add(e.key);
     if (e.key === " " || e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
       e.preventDefault();
@@ -6217,11 +6867,15 @@
   }
 
   canvas.addEventListener("mousedown", () => {
+    if (isModalOpen()) return;
+    if (state === "cutscene") { advanceCutscene(); return; }
     if (state === "over") startGame(lastGameMode);
     else if (state === "playing" && !useMobileControls()) jump();
   });
 
   canvas.addEventListener("touchstart", (e) => {
+    if (isModalOpen()) return;
+    if (state === "cutscene") { e.preventDefault(); advanceCutscene(); return; }
     if (state === "over") {
       e.preventDefault();
       startGame(lastGameMode);
@@ -6262,6 +6916,11 @@
   document.getElementById("leaderboard").addEventListener("click", function (e) {
     if (e.target.id === "leaderboard") hideLeaderboard();
   });
+
+  const chestClose = document.getElementById("chest-close");
+  if (chestClose) chestClose.addEventListener("click", closeChestModal);
+  const secretVictoryClose = document.getElementById("secret-victory-close");
+  if (secretVictoryClose) secretVictoryClose.addEventListener("click", closeSecretVictory);
 
   const playerNameInput = getPlayerNameInputEl();
   if (playerNameInput) {

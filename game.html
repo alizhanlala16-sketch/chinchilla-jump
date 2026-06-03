@@ -13,7 +13,7 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://chinchilla-jump.vercel.app/game">
   <meta property="og:locale" content="ru_RU">
-  <link rel="stylesheet" href="style.css?v=18">
+  <link rel="stylesheet" href="style.css?v=19">
 </head>
 <body class="game-page">
   <a href="index.html" class="home-link">← На главную</a>
@@ -66,10 +66,11 @@
           <canvas id="chinchilla-preview" width="140" height="120" aria-hidden="true"></canvas>
           <div class="cosmetic-group">
             <span class="cosmetic-label">Скин</span>
-            <div class="cosmetic-options cosmetic-options-3" id="skin-options">
+            <div class="cosmetic-options cosmetic-options-4" id="skin-options">
               <button type="button" class="cosmetic-btn" data-skin="standard">Стандарт</button>
               <button type="button" class="cosmetic-btn" data-skin="white">Белая</button>
               <button type="button" class="cosmetic-btn" data-skin="black">Чёрная</button>
+              <button type="button" class="cosmetic-btn locked" data-skin="rainbow" disabled>🔒 Радужная</button>
             </div>
           </div>
           <div class="cosmetic-group">
@@ -136,6 +137,26 @@
         </div>
       </div>
     </div>
+    <div id="chest-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="chest-title">
+      <div class="modal-card chest-card">
+        <h2 id="chest-title">📦 Старый сундук</h2>
+        <p class="subtitle">Внутри — записка с тайным шифром:</p>
+        <div class="morse-box" id="morse-box"></div>
+        <p class="morse-hint">Похоже на азбуку Морзе… Расшифруй и введи код вместо имени.</p>
+        <div class="btn-row">
+          <button id="chest-close" type="button">Закрыть</button>
+        </div>
+      </div>
+    </div>
+    <div id="secret-victory" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="sv-title">
+      <div class="modal-card chest-card">
+        <h2 id="sv-title">🌈 Радужная шиншилла спасена!</h2>
+        <p class="subtitle">Ты победил босса и освободил радужную шиншиллу. Новый скин разблокирован!</p>
+        <div class="btn-row">
+          <button id="secret-victory-close" type="button">Ура!</button>
+        </div>
+      </div>
+    </div>
     <div id="mobile-controls" class="mobile-controls" aria-hidden="true">
       <button type="button" class="ctrl-btn ctrl-jump" id="ctrl-jump" aria-label="Прыжок">↑</button>
       <div class="ctrl-move">
@@ -144,6 +165,6 @@
       </div>
     </div>
   </div>
-  <script src="game.js?v=white-belly-2"></script>
+  <script src="game.js?v=secret-1"></script>
 </body>
 </html>
