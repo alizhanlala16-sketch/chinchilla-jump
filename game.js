@@ -2929,9 +2929,12 @@
 
   function endGame() {
     state = "over";
+    const wasSecretFight = secretBoss || sciBoss;
+    secretBoss = false;
     sciBoss = false;
     bossSci = null;
     sciBullets = [];
+    stopBossMusic();
     setPlayingUi(false);
     keys.delete("ArrowLeft");
     keys.delete("ArrowRight");
@@ -2957,7 +2960,13 @@
     gameoverEl.classList.remove("hidden");
     gameoverEl.classList.add("visible");
 
-    if (gameMode === "arcade") {
+    if (wasSecretFight) {
+      if (finalModeLineEl) {
+        finalModeLineEl.textContent = "Секретный бой · результат не идёт в рекорды";
+        finalModeLineEl.classList.remove("hidden");
+      }
+      if (rankLine) rankLine.classList.add("hidden");
+    } else if (gameMode === "arcade") {
       const playerName = getPlayerName() || "Аноним";
       saveScoreAsync(playerName, score, maxHeight).then(function (updatedBoard) {
         updateFinalRankLine(updatedBoard, playerName, score, maxHeight);
@@ -3264,6 +3273,10 @@
   let musicStarted = false;
   let musicGain = null;
   let musicMuted = false;
+  let bossMusicOn = false;
+  let bossMusicGain = null;
+  let bossMusicStep = 0;
+  const BOSS_MUSIC_VOLUME = 0.06;
   const MUSIC_VOLUME = 0.045;
 
   function startMusic() {
@@ -3480,12 +3493,120 @@
   }
 
   function toggleMusic() {
-    if (!musicGain) return;
     const actx = getAudioCtx();
     if (!actx) return;
     musicMuted = !musicMuted;
-    musicGain.gain.cancelScheduledValues(actx.currentTime);
-    musicGain.gain.linearRampToValueAtTime(musicMuted ? 0 : MUSIC_VOLUME, actx.currentTime + 0.4);
+    if (musicGain) {
+      musicGain.gain.cancelScheduledValues(actx.currentTime);
+      musicGain.gain.linearRampToValueAtTime(musicMuted ? 0 : MUSIC_VOLUME * (bossMusicOn ? 0.4 : 1), actx.currentTime + 0.4);
+    }
+    if (bossMusicGain) {
+      bossMusicGain.gain.cancelScheduledValues(actx.currentTime);
+      bossMusicGain.gain.linearRampToValueAtTime(musicMuted ? 0 : BOSS_MUSIC_VOLUME, actx.currentTime + 0.4);
+    }
+  }
+
+  function startBossMusic() {
+    if (bossMusicOn) return;
+    const actx = getAudioCtx();
+    if (!actx) return;
+    bossMusicOn = true;
+    bossMusicStep = 0;
+
+    bossMusicGain = actx.createGain();
+    bossMusicGain.gain.value = 0;
+    bossMusicGain.gain.linearRampToValueAtTime(musicMuted ? 0 : BOSS_MUSIC_VOLUME, actx.currentTime + 1.2);
+    bossMusicGain.connect(actx.destination);
+
+    // duck the ambient track while the boss theme plays
+    if (musicGain && !musicMuted) {
+      musicGain.gain.cancelScheduledValues(actx.currentTime);
+      musicGain.gain.linearRampToValueAtTime(MUSIC_VOLUME * 0.4, actx.currentTime + 1.0);
+    }
+
+    // tense minor riff (D minor-ish), 16 steps
+    const root = 73.42; // D2
+    const riff = [0, 0, 12, 0, 15, 0, 13, 0, 0, 0, 10, 0, 13, 0, 12, 11];
+    const arp = [0, 12, 15, 19, 22, 19, 15, 12];
+    const STEP = 130;
+
+    function semi(base, n) { return base * Math.pow(2, n / 12); }
+
+    function bossStep() {
+      if (!bossMusicOn) return;
+      const a = getAudioCtx();
+      if (!a || !bossMusicGain) { setTimeout(bossStep, STEP); return; }
+      const now = a.currentTime;
+      const s = bossMusicStep % 16;
+
+      // pulsing low bass every step
+      const bo = a.createOscillator();
+      bo.type = "sawtooth";
+      const bn = riff[s];
+      bo.frequency.value = semi(root, bn);
+      const bg = a.createGain();
+      bg.gain.setValueAtTime(0, now);
+      bg.gain.linearRampToValueAtTime(0.5, now + 0.01);
+      bg.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+      const blp = a.createBiquadFilter();
+      blp.type = "lowpass";
+      blp.frequency.value = 420;
+      bo.connect(blp).connect(bg).connect(bossMusicGain);
+      bo.start(now); bo.stop(now + 0.18);
+
+      // driving arpeggio lead
+      const lo = a.createOscillator();
+      lo.type = "square";
+      lo.frequency.value = semi(root * 4, arp[s % arp.length]);
+      const lg = a.createGain();
+      lg.gain.setValueAtTime(0, now);
+      lg.gain.linearRampToValueAtTime(0.12, now + 0.005);
+      lg.gain.exponentialRampToValueAtTime(0.0008, now + 0.12);
+      const llp = a.createBiquadFilter();
+      llp.type = "lowpass";
+      llp.frequency.value = 2600;
+      lo.connect(llp).connect(lg).connect(bossMusicGain);
+      lo.start(now); lo.stop(now + 0.14);
+
+      // hat
+      if (s % 2 === 0) {
+        const len = Math.floor(a.sampleRate * 0.04);
+        const buf = a.createBuffer(1, len, a.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < len; i += 1) d[i] = Math.random() * 2 - 1;
+        const src = a.createBufferSource();
+        src.buffer = buf;
+        const hp = a.createBiquadFilter();
+        hp.type = "highpass";
+        hp.frequency.value = 7000;
+        const hg = a.createGain();
+        hg.gain.setValueAtTime(0.06, now);
+        hg.gain.exponentialRampToValueAtTime(0.0004, now + 0.04);
+        src.connect(hp).connect(hg).connect(bossMusicGain);
+        src.start(now);
+      }
+
+      bossMusicStep += 1;
+      setTimeout(bossStep, STEP);
+    }
+    setTimeout(bossStep, 200);
+  }
+
+  function stopBossMusic() {
+    if (!bossMusicOn) return;
+    bossMusicOn = false;
+    const actx = getAudioCtx();
+    if (actx && bossMusicGain) {
+      bossMusicGain.gain.cancelScheduledValues(actx.currentTime);
+      bossMusicGain.gain.linearRampToValueAtTime(0, actx.currentTime + 0.5);
+    }
+    if (actx && musicGain && !musicMuted) {
+      musicGain.gain.cancelScheduledValues(actx.currentTime);
+      musicGain.gain.linearRampToValueAtTime(MUSIC_VOLUME, actx.currentTime + 0.8);
+    }
+    const g = bossMusicGain;
+    setTimeout(function () { if (g) { try { g.disconnect(); } catch (e) {} } }, 800);
+    bossMusicGain = null;
   }
 
   function setPlayingUi(playing) {
@@ -3615,6 +3736,7 @@
     state = "playing";
     levelBannerText = "Лиса-король! Запрыгни ей на голову";
     levelBannerTimer = 200;
+    startBossMusic();
     updateHud();
   }
 
@@ -3678,6 +3800,7 @@
     state = "playing";
     levelBannerText = "Учёный! Уворачивайся, а когда он устанет — прыгни ему на голову";
     levelBannerTimer = 260;
+    startBossMusic();
     updateHud();
   }
 
@@ -4040,6 +4163,7 @@
     sciBoss = false;
     bossSci = null;
     sciBullets = [];
+    stopBossMusic();
     state = "over";
     const modal = document.getElementById("secret-victory");
     if (modal) { modal.classList.remove("hidden"); modal.classList.add("visible"); }
@@ -4053,6 +4177,7 @@
     bossSci = null;
     sciBullets = [];
     bossFox = null;
+    stopBossMusic();
     state = "menu";
     overlay.classList.remove("hidden");
     overlay.classList.add("visible");
