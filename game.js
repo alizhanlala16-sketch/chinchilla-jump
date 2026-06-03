@@ -3791,7 +3791,7 @@
     bossSci = {
       x: W - 90, y: SCI_GROUND_Y, hp: hp, maxHp: hp,
       phase: "walk", phaseTimer: 150, dir: -1, fireTimer: 70,
-      tiredT: 0, hurtT: 0, hitFlash: 0, walkAnim: 0, recoil: 0, headDuck: 0,
+      tiredT: 0, hurtT: 0, hitFlash: 0, walkAnim: 0, recoil: 0, headDuck: 0, stompCooldown: 0,
     };
     player.x = 70;
     player.y = SCI_GROUND_Y - 40;
@@ -3806,8 +3806,8 @@
 
   function spawnSciBullet() {
     if (!bossSci) return;
-    const gx = bossSci.x + bossSci.dir * 34;
-    const gy = bossSci.y - 56;
+    const gx = bossSci.x + bossSci.dir * (54 - bossSci.recoil * 6);
+    const gy = bossSci.y - 58 + bossSci.headDuck * 10;
     const ang = Math.atan2(player.y - gy, player.x - gx);
     const speed = 5.4;
     sciBullets.push({
@@ -3826,6 +3826,7 @@
     const b = bossSci;
     if (b.hitFlash > 0) b.hitFlash -= 1;
     if (b.recoil > 0) b.recoil *= 0.82;
+    if (b.stompCooldown > 0) b.stompCooldown -= 1;
 
     if (b.phase === "walk") {
       b.walkAnim += 0.2;
@@ -3877,20 +3878,27 @@
 
     // jump on head only while tired
     const headY = b.y - 64 + b.headDuck * 26;
+    let stomped = false;
     if (b.phase === "tired" && player.vy > 1) {
       const dx = player.x - b.x;
       const dy = player.y - headY;
       if (Math.abs(dx) < 30 && dy > -22 && dy < 24) {
+        stomped = true;
         b.hp -= 1;
         b.hitFlash = 18;
+        b.stompCooldown = 55;
         b.phase = "walk";
         b.phaseTimer = 130 + Math.random() * 50;
         b.fireTimer = 40;
         player.vy = JUMP_FORCE * 0.95;
+        player.invincibleTimer = 90;
         spawnSparkles(b.x, headY);
         spawnFurBurst(b.x, headY);
         playSnort(1.6, 0.35);
         score += 40;
+        sciBullets = sciBullets.filter(function (bl) {
+          return Math.hypot(bl.x - player.x, bl.y - player.y) > 50;
+        });
         updateHud();
         if (b.hp <= 0) {
           for (let i = 0; i < 10; i += 1) spawnSparkles(b.x + rand(-30, 30), b.y - rand(0, 70));
@@ -3899,11 +3907,13 @@
           return;
         }
       }
-    } else if (b.phase === "walk") {
-      // body contact damage while active
+    }
+
+    if (!stomped && b.phase === "walk" && b.stompCooldown <= 0) {
       const dx = player.x - b.x;
       const dy = player.y - (b.y - 32);
-      if (Math.abs(dx) < 20 && Math.abs(dy) < 40) {
+      const fallingOnHead = player.vy > 0 && player.y < headY + 20;
+      if (!fallingOnHead && Math.abs(dx) < 20 && Math.abs(dy) < 40) {
         if (player.invincibleTimer <= 0 && player.shieldTimer <= 0 && player.rocketTimer <= 0) {
           playSqueak();
         }
@@ -3983,142 +3993,256 @@
     const baseY = b.y - cameraY;
     const flash = b.hitFlash > 0 && Math.floor(b.hitFlash / 3) % 2 === 0;
     const duck = b.headDuck;
+    const tired = b.phase === "tired";
+    const lean = duck * 12;
+    const recoil = b.recoil * 6;
+    const stride = Math.sin(b.walkAnim) * 8 * (b.phase === "walk" ? 1 : 0);
+    const coat = flash ? "#ffd2d2" : "#f2f5f9";
+    const coatShade = flash ? "rgba(255,180,180,0.45)" : "rgba(190,205,220,0.55)";
+
     ctx.save();
     ctx.translate(b.x, baseY);
     ctx.scale(b.dir, 1);
 
     // shadow
-    ctx.fillStyle = "rgba(0,0,0,0.22)";
+    ctx.fillStyle = "rgba(0,0,0,0.24)";
     ctx.beginPath();
-    ctx.ellipse(0, 2, 30, 7, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 2, 34, 8, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    const lean = duck * 12;
-    // legs
-    ctx.strokeStyle = "#39434f";
-    ctx.lineWidth = 11;
+    // back arm
+    ctx.strokeStyle = coat;
+    ctx.lineWidth = 10;
     ctx.lineCap = "round";
-    const stride = Math.sin(b.walkAnim) * 8 * (b.phase === "walk" ? 1 : 0);
     ctx.beginPath();
-    ctx.moveTo(-9, -34); ctx.lineTo(-9 + stride, -2);
-    ctx.moveTo(9, -34); ctx.lineTo(9 - stride, -2);
+    ctx.moveTo(-18, -58); ctx.lineTo(-28, -36);
+    ctx.stroke();
+    ctx.fillStyle = "#cfe6f4";
+    ctx.beginPath();
+    ctx.arc(-28, -35, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // legs + boots
+    ctx.strokeStyle = "#39434f";
+    ctx.lineWidth = 12;
+    ctx.beginPath();
+    ctx.moveTo(-10, -34); ctx.lineTo(-10 + stride, -2);
+    ctx.moveTo(10, -34); ctx.lineTo(10 - stride, -2);
     ctx.stroke();
     ctx.fillStyle = "#1c222b";
     ctx.beginPath();
-    ctx.ellipse(-9 + stride, -1, 9, 4, 0, 0, Math.PI * 2);
-    ctx.ellipse(9 - stride, -1, 9, 4, 0, 0, Math.PI * 2);
+    ctx.ellipse(-10 + stride, -1, 10, 4.5, 0, 0, Math.PI * 2);
+    ctx.ellipse(10 - stride, -1, 10, 4.5, 0, 0, Math.PI * 2);
     ctx.fill();
+    ctx.fillStyle = "#2a3340";
+    ctx.fillRect(-18 + stride, -5, 16, 3);
+    ctx.fillRect(2 - stride, -5, 16, 3);
 
     // coat body
     ctx.save();
     ctx.translate(0, -34);
     ctx.rotate(duck * 0.12);
-    ctx.fillStyle = flash ? "#ffd2d2" : "#f2f5f9";
+    ctx.fillStyle = coat;
     ctx.beginPath();
-    ctx.moveTo(-26, -34);
-    ctx.lineTo(26, -34);
-    ctx.lineTo(20, 8);
-    ctx.lineTo(-20, 8);
+    ctx.moveTo(-28, -36);
+    ctx.lineTo(28, -36);
+    ctx.lineTo(22, 10);
+    ctx.lineTo(-22, 10);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = "rgba(190,205,220,0.5)";
+    ctx.fillStyle = coatShade;
     ctx.beginPath();
-    ctx.moveTo(4, -34); ctx.lineTo(26, -34); ctx.lineTo(20, 8); ctx.lineTo(4, 8); ctx.closePath();
+    ctx.moveTo(5, -36); ctx.lineTo(28, -36); ctx.lineTo(22, 10); ctx.lineTo(5, 10);
+    ctx.closePath();
+    ctx.fill();
+    // collar
+    ctx.fillStyle = "#3a4654";
+    ctx.beginPath();
+    ctx.moveTo(-6, -36); ctx.lineTo(0, -28); ctx.lineTo(6, -36); ctx.closePath();
     ctx.fill();
     ctx.strokeStyle = "#c4ccd4";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(0, -34); ctx.lineTo(0, 8);
+    ctx.moveTo(0, -36); ctx.lineTo(0, 10);
     ctx.stroke();
-    // tie
+    // pockets
+    ctx.strokeStyle = "rgba(140,155,170,0.7)";
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(-20, -8, 12, 10);
+    ctx.strokeRect(8, -8, 12, 10);
+    // buttons
+    ctx.fillStyle = "#aeb8c2";
+    for (let btn = -18; btn <= 0; btn += 9) {
+      ctx.beginPath();
+      ctx.arc(0, btn, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // tie + knot
     ctx.fillStyle = "#5fa8d8";
     ctx.beginPath();
-    ctx.moveTo(-4, -30); ctx.lineTo(4, -30); ctx.lineTo(2, -10); ctx.lineTo(-2, -10); ctx.closePath();
+    ctx.moveTo(-4, -32); ctx.lineTo(4, -32); ctx.lineTo(2.5, -12); ctx.lineTo(-2.5, -12); ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#3d7aa8";
+    ctx.beginPath();
+    ctx.arc(0, -30, 2.2, 0, Math.PI * 2);
     ctx.fill();
     // badge
     ctx.fillStyle = "#ffd24a";
-    ctx.fillRect(8, -20, 9, 12);
+    ctx.fillRect(10, -22, 11, 14);
+    ctx.strokeStyle = "#b89020";
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect(10, -22, 11, 14);
     ctx.fillStyle = "#7a5a10";
-    ctx.fillRect(9.6, -17, 6, 2);
+    ctx.fillRect(11.5, -19, 8, 1.5);
+    ctx.fillRect(11.5, -15, 6, 1.2);
+    // clipboard on back hip
+    ctx.fillStyle = "#8a6a40";
+    ctx.fillRect(-24, -14, 10, 14);
+    ctx.fillStyle = "#eef2f6";
+    ctx.fillRect(-22.5, -12, 7, 10);
+    ctx.strokeStyle = "#666";
+    ctx.lineWidth = 0.6;
+    ctx.strokeRect(-22.5, -12, 7, 10);
 
-    // arm holding pistol (front)
-    const recoil = b.recoil * 6;
-    ctx.strokeStyle = flash ? "#ffd2d2" : "#f2f5f9";
-    ctx.lineWidth = 9;
+    // gun arm
+    ctx.strokeStyle = coat;
+    ctx.lineWidth = 10;
     ctx.beginPath();
-    ctx.moveTo(16, -22); ctx.lineTo(34 - recoil, -22 + lean);
+    ctx.moveTo(18, -24); ctx.lineTo(36 - recoil, -24 + lean);
     ctx.stroke();
     ctx.fillStyle = "#cfe6f4";
     ctx.beginPath();
-    ctx.arc(34 - recoil, -22 + lean, 4, 0, Math.PI * 2);
+    ctx.arc(36 - recoil, -23 + lean, 4.5, 0, Math.PI * 2);
     ctx.fill();
-    // pistol
-    ctx.fillStyle = "#3a4654";
-    ctx.fillRect(34 - recoil, -25 + lean, 14, 5);
-    ctx.fillRect(36 - recoil, -20 + lean, 5, 8);
-    if (b.recoil > 0.4) {
+    // pistol detail
+    ctx.fillStyle = "#2a3340";
+    ctx.fillRect(36 - recoil, -27 + lean, 18, 6);
+    ctx.fillStyle = "#4a5664";
+    ctx.fillRect(38 - recoil, -25 + lean, 12, 2);
+    ctx.fillStyle = "#1a2028";
+    ctx.fillRect(40 - recoil, -19 + lean, 6, 10);
+    ctx.fillStyle = "#555";
+    ctx.fillRect(44 - recoil, -17 + lean, 2, 4);
+    if (b.recoil > 0.35) {
       ctx.fillStyle = "rgba(255,210,120," + b.recoil.toFixed(2) + ")";
       ctx.beginPath();
-      ctx.arc(50 - recoil, -22 + lean, 5 * b.recoil, 0, Math.PI * 2);
+      ctx.arc(56 - recoil, -24 + lean, 6 * b.recoil, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,160,60," + (b.recoil * 0.6).toFixed(2) + ")";
+      ctx.beginPath();
+      ctx.arc(52 - recoil, -24 + lean, 3 * b.recoil, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();
 
     // head
     ctx.save();
-    ctx.translate(0, -64 + duck * 26);
-    ctx.rotate(duck * 0.3);
+    ctx.translate(0, -68 + duck * 28);
+    ctx.rotate(duck * 0.32);
+    // neck
+    ctx.fillStyle = "#e0b48f";
+    ctx.fillRect(-4, 10, 8, 8);
+    // face
     ctx.fillStyle = "#f0c9a8";
     ctx.beginPath();
-    ctx.arc(0, 0, 15, 0, Math.PI * 2);
+    ctx.arc(0, 0, 16, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(220,170,140,0.35)";
+    ctx.beginPath();
+    ctx.arc(8, 4, 5, 0, Math.PI * 2);
+    ctx.fill();
+    // ear
+    ctx.fillStyle = "#e8b898";
+    ctx.beginPath();
+    ctx.arc(-15, 1, 2.5, 0, Math.PI * 2);
     ctx.fill();
     // hair
     ctx.fillStyle = "#3a3530";
     ctx.beginPath();
-    ctx.arc(0, -4, 15.4, Math.PI * 1.02, Math.PI * 1.98);
+    ctx.arc(0, -5, 16.5, Math.PI * 1.02, Math.PI * 1.98);
     ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-14, -2); ctx.lineTo(-15, 6); ctx.lineTo(-11, 2); ctx.closePath();
+    ctx.moveTo(14, -2); ctx.lineTo(15, 6); ctx.lineTo(11, 2); ctx.closePath();
+    ctx.fill();
+    // forehead goggles when active
+    if (!tired) {
+      ctx.strokeStyle = "#555";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(-6, -12, 5, Math.PI, 0);
+      ctx.arc(6, -12, 5, Math.PI, 0);
+      ctx.stroke();
+      ctx.fillStyle = "rgba(120,200,255,0.35)";
+      ctx.fillRect(-11, -14, 22, 4);
+    }
     // glasses
     ctx.strokeStyle = "#222";
-    ctx.lineWidth = 2.4;
+    ctx.lineWidth = 2.6;
     ctx.beginPath();
-    ctx.arc(-5, -1, 4.6, 0, Math.PI * 2);
-    ctx.arc(6, -1, 4.6, 0, Math.PI * 2);
-    ctx.moveTo(-0.4, -1); ctx.lineTo(1.4, -1);
+    ctx.arc(-6, 0, 5, 0, Math.PI * 2);
+    ctx.arc(7, 0, 5, 0, Math.PI * 2);
+    ctx.moveTo(-1, 0); ctx.lineTo(1, 0);
+    ctx.moveTo(-11, -1); ctx.lineTo(-14, -2);
+    ctx.moveTo(12, -1); ctx.lineTo(15, -2);
     ctx.stroke();
-    ctx.fillStyle = "rgba(180,220,255,0.6)";
+    ctx.fillStyle = "rgba(180,220,255,0.62)";
     ctx.beginPath();
-    ctx.arc(-5, -1, 3.6, 0, Math.PI * 2);
-    ctx.arc(6, -1, 3.6, 0, Math.PI * 2);
+    ctx.arc(-6, 0, 3.8, 0, Math.PI * 2);
+    ctx.arc(7, 0, 3.8, 0, Math.PI * 2);
     ctx.fill();
-    // expression
-    if (b.phase === "tired") {
-      // panting open mouth + sweat
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.beginPath();
+    ctx.arc(-7.2, -1.5, 1, 0, Math.PI * 2);
+    ctx.arc(5.8, -1.5, 1, 0, Math.PI * 2);
+    ctx.fill();
+    // nose + mouth
+    ctx.fillStyle = "#d4a080";
+    ctx.beginPath();
+    ctx.arc(0, 4, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+    if (tired) {
       ctx.fillStyle = "#7a3b30";
       ctx.beginPath();
-      ctx.ellipse(0, 8, 3.5, 2.6, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 10, 4, 3, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = "rgba(120,200,255,0.85)";
+      ctx.fillStyle = "rgba(120,200,255,0.9)";
       ctx.beginPath();
-      ctx.arc(12, -2, 2, 0, Math.PI * 2);
+      ctx.arc(14, -2, 2.2, 0, Math.PI * 2);
+      ctx.arc(16, 4, 1.6, 0, Math.PI * 2);
       ctx.fill();
+      // tired eyes (lines)
+      ctx.strokeStyle = "#3a3530";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(-9, -1); ctx.lineTo(-3, -1);
+      ctx.moveTo(4, -1); ctx.lineTo(10, -1);
+      ctx.stroke();
     } else {
+      ctx.fillStyle = "#0a0a0a";
+      ctx.beginPath();
+      ctx.arc(-6, 1, 1.3, 0, Math.PI * 2);
+      ctx.arc(7, 1, 1.3, 0, Math.PI * 2);
+      ctx.fill();
       ctx.strokeStyle = "#a06a4a";
       ctx.lineWidth = 1.2;
       ctx.beginPath();
-      ctx.moveTo(-3, 8); ctx.lineTo(3, 8);
+      ctx.moveTo(-4, 10); ctx.lineTo(4, 10);
       ctx.stroke();
     }
     ctx.restore();
 
     ctx.restore();
 
-    if (b.phase === "tired") {
+    if (tired) {
       ctx.save();
-      ctx.globalAlpha = 0.6 + Math.sin(Date.now() * 0.01) * 0.3;
+      ctx.globalAlpha = 0.65 + Math.sin(Date.now() * 0.01) * 0.25;
       ctx.fillStyle = "#ffe08a";
-      ctx.font = "bold 13px Segoe UI, sans-serif";
+      ctx.font = "bold 14px Segoe UI, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("устал! прыгай!", b.x, baseY - 64 + duck * 26 - 28);
+      ctx.shadowColor = "rgba(0,0,0,0.8)";
+      ctx.shadowBlur = 4;
+      ctx.fillText("устал! прыгай!", b.x, baseY - 68 + duck * 28 - 30);
       ctx.restore();
     }
   }
