@@ -157,12 +157,16 @@ body.game-page {
   }
   #overlay .cosmetics-panel {
     margin-bottom: 6px;
-    gap: 6px 10px;
-    grid-template-columns: 84px 1fr;
+    gap: 6px;
   }
   #overlay #chinchilla-preview {
-    width: 84px;
-    height: 96px;
+    width: 88px;
+    height: 82px;
+  }
+  #overlay .cosmetic-btn {
+    min-height: 34px !important;
+    padding: 6px 5px !important;
+    font-size: 11px !important;
   }
   #overlay .overlay-actions .btn-row {
     margin-top: 0;
@@ -335,7 +339,8 @@ body.game-page {
     font-size: 13px;
   }
   #overlay .overlay-inner {
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     padding-bottom: 4px;
     gap: 6px;
   }
@@ -360,21 +365,20 @@ body.game-page {
   }
   #overlay .cosmetics-panel {
     margin-bottom: 4px;
-    gap: 4px 10px;
-    grid-template-columns: 86px 1fr;
+    gap: 4px;
   }
   #overlay #chinchilla-preview {
-    width: 86px;
-    height: 94px;
+    width: 84px;
+    height: 78px;
   }
   #overlay .cosmetic-label {
-    font-size: 12px;
-    margin-bottom: 4px;
+    font-size: 11px;
+    margin-bottom: 3px;
   }
   #overlay .cosmetic-btn {
-    min-height: 36px !important;
-    padding: 8px 10px !important;
-    font-size: 13px !important;
+    min-height: 32px !important;
+    padding: 6px 5px !important;
+    font-size: 11px !important;
   }
   #overlay .overlay-actions {
     padding-top: 8px;
@@ -581,18 +585,16 @@ button:hover {
   width: 100%;
   max-width: 100%;
   margin: 0 0 8px;
-  display: grid;
-  grid-template-columns: 96px 1fr;
-  grid-template-rows: auto auto;
-  gap: 8px 12px;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
 }
 
 #chinchilla-preview {
-  grid-row: 1 / span 2;
-  grid-column: 1;
-  width: 96px;
-  height: 110px;
+  align-self: center;
+  width: 100px;
+  height: 92px;
   border-radius: 14px;
   background:
     radial-gradient(ellipse at 50% 35%, rgba(255, 220, 150, 0.18), transparent 65%),
@@ -600,19 +602,17 @@ button:hover {
   border: 1px solid rgba(255, 200, 120, 0.28);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 12px rgba(0, 0, 0, 0.25);
   display: block;
-  align-self: center;
 }
 
 .cosmetic-group {
   text-align: left;
   width: 100%;
-  grid-column: 2;
 }
 
 .cosmetic-label {
   display: block;
-  margin-bottom: 6px;
-  font-size: 13px;
+  margin-bottom: 5px;
+  font-size: 12px;
   font-weight: 600;
   color: rgba(255, 224, 138, 0.85);
   letter-spacing: 0.04em;
@@ -620,18 +620,13 @@ button:hover {
 
 .cosmetic-options {
   display: grid;
-  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
   width: 100%;
 }
 
-.cosmetic-options-3 {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.cosmetic-options-4 {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
+.cosmetic-options-3,
+.cosmetic-options-4,
 .cosmetic-options-2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -639,9 +634,9 @@ button:hover {
 .cosmetic-btn {
   width: 100%;
   min-width: 0;
-  min-height: 44px;
-  padding: 12px 10px !important;
-  font-size: 14px !important;
+  min-height: 36px;
+  padding: 7px 6px !important;
+  font-size: 12px !important;
   font-weight: 700 !important;
   border-radius: 999px !important;
   background: rgba(255, 255, 255, 0.08) !important;
@@ -650,7 +645,14 @@ button:hover {
   box-shadow: none !important;
   cursor: pointer;
   transition: background 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
-  line-height: 1.25;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cosmetic-btn.hidden {
+  display: none !important;
 }
 
 .cosmetic-btn:hover {

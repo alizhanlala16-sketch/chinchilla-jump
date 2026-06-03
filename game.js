@@ -107,33 +107,27 @@
   }
   function refreshRainbowButton() {
     const btn = document.querySelector('#skin-options .cosmetic-btn[data-skin="rainbow"]');
-    const grid = document.getElementById("skin-options");
     if (!btn) return;
     if (isRainbowUnlocked()) {
       btn.classList.remove("locked", "hidden");
       btn.disabled = false;
       btn.textContent = "Радужная";
-      if (grid) { grid.classList.add("cosmetic-options-4"); grid.classList.remove("cosmetic-options-3"); }
     } else {
       btn.classList.add("hidden");
       btn.disabled = true;
-      if (grid) { grid.classList.add("cosmetic-options-3"); grid.classList.remove("cosmetic-options-4"); }
     }
   }
 
   function refreshBlueCapButton() {
     const btn = document.querySelector('#hat-options .cosmetic-btn[data-hat="bluecap"]');
-    const grid = document.getElementById("hat-options");
     if (!btn) return;
     if (isBlueCapUnlocked()) {
       btn.classList.remove("hidden");
       btn.disabled = false;
-      btn.textContent = "Голубая кепка";
-      if (grid) { grid.classList.add("cosmetic-options-4"); grid.classList.remove("cosmetic-options-3"); }
+      btn.textContent = "Голубая";
     } else {
       btn.classList.add("hidden");
       btn.disabled = true;
-      if (grid) { grid.classList.add("cosmetic-options-3"); grid.classList.remove("cosmetic-options-4"); }
     }
   }
 
