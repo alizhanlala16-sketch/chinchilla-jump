@@ -4421,7 +4421,7 @@
         ctx.lineTo(W / 2 + i * 12, 346);
         ctx.stroke();
       }
-      drawCutsceneCaption(["Лаборатория «Дикий Лес».", "Учёные ставят опыты над шиншиллами…"]);
+      drawCutsceneCaption(["Лаборатория «Дикий Лес».", "Учёные держат шиншилл в клетках…"]);
     } else if (phase === 1) {
       drawScientist(60, 200, 2.1, t);
       drawScientist(W - 60, 200, 2.1, t + 40);
@@ -4430,13 +4430,14 @@
       drawCutsceneFox(fxx, 330, 1);
       // released snake
       drawCutsceneSnake(W - 120, 360, t);
-      drawCutsceneCaption(["Они выпустили лис и змей в лес!"]);
+      drawCutsceneCaption(["Учёные выпустили лис и змей,", "чтобы переловить всех шиншилл!"]);
     } else if (phase === 2) {
       const flow = (t * 2.4) % (W + 120);
+      const climb = Math.min(t * 0.5, 150);
       for (let i = 0; i < cutscene.runners.length; i += 1) {
         const r = cutscene.runners[i];
         const x = W - 40 - i * 46 - (i % 2) * 8;
-        const y = 180 + i * 60 + Math.sin(gt * 2 + r.phase) * 8;
+        const y = 260 + i * 60 - climb + Math.sin(gt * 2 + r.phase) * 8;
         drawMiniChin(x, y, 1.0, r.skin, t + i * 20, true);
       }
       drawCutsceneFox(W - 10 - (t * 1.5 % 120), 420, 1);
@@ -4446,7 +4447,7 @@
         const sx = ((t * 4 + i * 160) % (W + 80)) - 40;
         drawCutsceneSaw(sx, 150 + i * 90, t);
       }
-      drawCutsceneCaption(["Шиншиллы бросились бежать по веткам!"]);
+      drawCutsceneCaption(["Но шиншиллы вырвались наружу", "и поскакали вверх по веткам!"]);
     } else if (phase === 3) {
       drawScientist(W / 2 - 80, 230, 2.2, t * 0.3);
       drawScientist(W / 2 + 80, 230, 2.2, t * 0.3 + 20);
@@ -4467,7 +4468,7 @@
         ctx.lineTo(W / 2 + 50, 215 + j * 18);
         ctx.stroke();
       }
-      drawCutsceneCaption(["Учёные поймали радужную шиншиллу сетью…"]);
+      drawCutsceneCaption(["…только радужную успели поймать сетью!"]);
     } else {
       // call to action
       ctx.fillStyle = "rgba(0,0,0,0.25)";
