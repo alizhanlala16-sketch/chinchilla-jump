@@ -1489,6 +1489,7 @@
   let sciBoss = false;
   let bossSci = null;
   let sciBullets = [];
+  let sciVictory = null;
   let cutscene = null;
 
   const forestTreesFar = [];
@@ -1650,6 +1651,7 @@
     sciBoss = false;
     bossSci = null;
     sciBullets = [];
+    sciVictory = null;
     cutscene = null;
 
     if (gameMode === "levels") {
@@ -3901,9 +3903,8 @@
         });
         updateHud();
         if (b.hp <= 0) {
-          for (let i = 0; i < 10; i += 1) spawnSparkles(b.x + rand(-30, 30), b.y - rand(0, 70));
           score += 300;
-          onSecretBossDefeated();
+          startSciVictory(b.x, b.y);
           return;
         }
       }
@@ -4280,6 +4281,204 @@
     ctx.restore();
   }
 
+  function spawnSciExplosion(x, y) {
+    const colors = ["#fff", "#ffd24a", "#ff7040", "#5fa8d8", "#f2f5f9", "#c4ccd4", "#ffe08a"];
+    for (let i = 0; i < 48; i += 1) {
+      const a = (i / 48) * Math.PI * 2 + rand(-0.2, 0.2);
+      const sp = rand(3, 9);
+      particles.push({
+        x: x, y: y - 50,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp - rand(1, 4),
+        life: rand(35, 70),
+        maxLife: 70,
+        color: colors[i % colors.length],
+        size: rand(2.5, 6),
+      });
+    }
+    for (let i = 0; i < 24; i += 1) {
+      particles.push({
+        x: x + rand(-20, 20), y: y - rand(30, 70),
+        vx: rand(-2, 2), vy: rand(-5, -1.5),
+        life: rand(40, 65),
+        maxLife: 65,
+        color: "rgba(255,200,120,0.95)",
+        size: rand(3, 7),
+      });
+    }
+    spawnSparkles(x, y - 50);
+    spawnSparkles(x, y - 50);
+    playSnort(2.2, 0.5);
+  }
+
+  function startSciVictory(sx, sy) {
+    bossSci = null;
+    sciBullets = [];
+    sciVictory = {
+      t: 0,
+      x: sx,
+      y: sy,
+      cageX: W / 2,
+      cageY: SCI_GROUND_Y - 88,
+    };
+    spawnSciExplosion(sx, sy);
+    state = "sciVictory";
+    player.vx = 0;
+    player.vy = 0;
+    player.invincibleTimer = 999;
+  }
+
+  function updateSciVictory() {
+    if (!sciVictory) return;
+    sciVictory.t += 1;
+    if (sciVictory.t === 8) playSnort(1.4, 0.35);
+    if (sciVictory.t === 55) {
+      for (let i = 0; i < 16; i += 1) spawnSparkles(sciVictory.cageX + rand(-40, 40), sciVictory.cageY + rand(-20, 30));
+      playSnort(1.1, 0.28);
+    }
+    if (sciVictory.t >= 210) {
+      sciVictory = null;
+      onSecretBossDefeated();
+    }
+  }
+
+  function drawVictoryCage(cx, cy, sc, t) {
+    const pop = sciVictory.t < 55 ? 0 : Math.min(1, (sciVictory.t - 55) / 18);
+    const bounce = pop >= 1 ? Math.sin((sciVictory.t - 73) * 0.14) * 4 * Math.max(0, 1 - (sciVictory.t - 73) / 80) : 0;
+    const scale = pop < 1 ? pop * pop * 1.15 : 1 + Math.sin((sciVictory.t - 55) * 0.35) * 0.04 * Math.max(0, 1 - (sciVictory.t - 90) / 60);
+    const w = 118 * sc * scale;
+    const h = 98 * sc * scale;
+    const gx = cx - w / 2;
+    const gy = cy - h + bounce;
+
+    ctx.save();
+    ctx.translate(cx, cy + bounce);
+    ctx.scale(scale * sc, scale * sc);
+
+    // cage shadow
+    ctx.fillStyle = "rgba(0,0,0,0.2)";
+    ctx.beginPath();
+    ctx.ellipse(0, h * 0.52, w * 0.42, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // cage interior
+    ctx.fillStyle = "rgba(12,20,32,0.55)";
+    ctx.fillRect(-w / 2, -h * 0.88, w, h * 0.88);
+
+    // rainbow chinchilla inside
+    if (pop > 0.35) {
+      drawMiniChin(0, -h * 0.38 + Math.sin(t * 0.12) * 3, 0.82, "rainbow", t, false);
+    }
+
+    // bars
+    ctx.strokeStyle = "rgba(210,225,240,0.82)";
+    ctx.lineWidth = 2.6;
+    const barCount = 9;
+    for (let i = 0; i <= barCount; i += 1) {
+      const bx = -w / 2 + (i / barCount) * w;
+      ctx.beginPath();
+      ctx.moveTo(bx, -h * 0.88);
+      ctx.lineTo(bx, h * 0.06);
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.moveTo(-w / 2, -h * 0.55); ctx.lineTo(w / 2, -h * 0.55);
+    ctx.moveTo(-w / 2, -h * 0.22); ctx.lineTo(w / 2, -h * 0.22);
+    ctx.stroke();
+
+    // frame
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "rgba(150,170,195,0.95)";
+    ctx.strokeRect(-w / 2, -h * 0.88, w, h * 0.94);
+
+    // broken lock flying off
+    const lockT = Math.max(0, sciVictory.t - 58);
+    if (lockT < 40) {
+      ctx.save();
+      ctx.translate(8 + lockT * 1.8, -h * 0.12 - lockT * 0.6 + lockT * lockT * 0.015);
+      ctx.rotate(lockT * 0.18);
+      ctx.fillStyle = "#ffd24a";
+      ctx.fillRect(-5, -4, 10, 9);
+      ctx.restore();
+    }
+
+    // sparkle aura around freed cage
+    if (pop > 0.8) {
+      const fa = 0.35 + Math.sin(t * 0.1) * 0.25;
+      ctx.strokeStyle = "rgba(255,220,140," + fa.toFixed(2) + ")";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 8]);
+      ctx.strokeRect(-w / 2 - 6, -h * 0.88 - 6, w + 12, h + 18);
+      ctx.setLineDash([]);
+    }
+
+    ctx.restore();
+  }
+
+  function drawSciVictory() {
+    if (!sciVictory) return;
+    const v = sciVictory;
+    const t = v.t;
+    drawSciArenaBg();
+
+    ctx.save();
+    ctx.translate(-cameraX, 0);
+    drawPlatforms();
+    drawParticles();
+
+    // explosion flash + smoke ring
+    if (t < 45) {
+      const flash = Math.max(0, 1 - t / 45);
+      ctx.fillStyle = "rgba(255,240,200," + (flash * 0.55).toFixed(2) + ")";
+      ctx.fillRect(0, 0, W, H);
+      const ringR = t * 5;
+      ctx.strokeStyle = "rgba(255,120,60," + (flash * 0.7).toFixed(2) + ")";
+      ctx.lineWidth = 6 + flash * 8;
+      ctx.beginPath();
+      ctx.arc(v.x, v.y - 50 - cameraY, ringR, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // scientist debris fading (lab coat shreds)
+    if (t < 35) {
+      const fade = 1 - t / 35;
+      ctx.save();
+      ctx.globalAlpha = fade;
+      ctx.translate(v.x, v.y - cameraY);
+      ctx.fillStyle = "#f2f5f9";
+      for (let i = 0; i < 6; i += 1) {
+        ctx.save();
+        ctx.rotate(i * 1.1 + t * 0.2);
+        ctx.fillRect(10 + i * 8, -40 - t * 2, 8, 12);
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    // victory cage with rainbow chinchilla
+    if (t >= 50) {
+      drawVictoryCage(v.cageX, v.cageY - cameraY, 1, t);
+    }
+
+    // player watches
+    drawChinchilla();
+    ctx.restore();
+
+    if (t >= 90 && t < 205) {
+      ctx.save();
+      ctx.globalAlpha = 0.55 + Math.sin(t * 0.08) * 0.2;
+      ctx.fillStyle = "#ffe08a";
+      ctx.font = "bold 16px Segoe UI, sans-serif";
+      ctx.textAlign = "center";
+      ctx.shadowColor = "rgba(0,0,0,0.85)";
+      ctx.shadowBlur = 5;
+      ctx.fillText("Радужная шиншилла спасена!", W / 2, H - 90);
+      ctx.restore();
+    }
+
+    drawLives();
+  }
+
   function onSecretBossDefeated() {
     unlockRainbow();
     setSelectedSkin("rainbow");
@@ -4300,6 +4499,7 @@
     sciBoss = false;
     bossSci = null;
     sciBullets = [];
+    sciVictory = null;
     bossFox = null;
     stopBossMusic();
     state = "menu";
@@ -7634,6 +7834,7 @@
 
   function render() {
     if (state === "cutscene") { drawCutscene(); return; }
+    if (state === "sciVictory") { drawSciVictory(); return; }
     drawBackground();
     ctx.save();
     ctx.translate(-cameraX, 0);
@@ -7673,6 +7874,7 @@
   function update() {
     updateBackgroundLeaves();
     if (state === "cutscene") { updateCutscene(); return; }
+    if (state === "sciVictory") { updateSciVictory(); updateParticles(); return; }
     if (state !== "playing") return;
     if (paused) return;
     updatePlatforms();
