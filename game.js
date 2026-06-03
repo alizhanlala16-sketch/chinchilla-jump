@@ -4350,20 +4350,166 @@
     ctx.restore();
   }
 
-  function drawCutsceneCaption(lines) {
-    const boxH = 14 + lines.length * 22;
-    ctx.fillStyle = "rgba(10,12,22,0.82)";
-    ctx.fillRect(0, H - boxH - 30, W, boxH);
+  const CUTSCENE_BAR = 62;
+
+  function drawCutsceneCaption(lines, alpha) {
+    const a = alpha == null ? 1 : alpha;
+    ctx.save();
+    ctx.globalAlpha = a;
     ctx.fillStyle = "#fff";
-    ctx.font = "bold 17px Segoe UI, sans-serif";
+    ctx.font = "600 18px Segoe UI, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(0,0,0,0.85)";
+    ctx.shadowBlur = 6;
+    const startY = H - CUTSCENE_BAR / 2 - (lines.length - 1) * 11;
     for (let i = 0; i < lines.length; i += 1) {
-      ctx.fillText(lines[i], W / 2, H - boxH - 30 + 18 + i * 22);
+      ctx.fillText(lines[i], W / 2, startY + i * 22);
     }
-    ctx.fillStyle = "rgba(255,224,138,0.85)";
+    ctx.restore();
+  }
+
+  function drawCutsceneVignette() {
+    const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.24, W / 2, H / 2, H * 0.72);
+    vg.addColorStop(0, "rgba(0,0,0,0)");
+    vg.addColorStop(1, "rgba(0,0,0,0.5)");
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function drawCutsceneLetterbox() {
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, W, CUTSCENE_BAR);
+    ctx.fillRect(0, H - CUTSCENE_BAR, W, CUTSCENE_BAR);
+    ctx.fillStyle = "rgba(255,210,120,0.22)";
+    ctx.fillRect(0, CUTSCENE_BAR - 2, W, 2);
+    ctx.fillRect(0, H - CUTSCENE_BAR, W, 2);
+    ctx.save();
+    ctx.globalAlpha = 0.45 + Math.sin(cutscene.t * 0.1) * 0.2;
+    ctx.fillStyle = "rgba(255,224,138,0.95)";
     ctx.font = "12px Segoe UI, sans-serif";
-    ctx.fillText("нажми / тапни, чтобы продолжить ▸", W / 2, H - 16);
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    ctx.fillText("нажми / тапни ▸", W - 14, CUTSCENE_BAR / 2);
+    ctx.restore();
+  }
+
+  function drawLabTube(x, y, t) {
+    ctx.save();
+    ctx.translate(x, y);
+    const w = 26;
+    const h = 150;
+    ctx.fillStyle = "rgba(150,210,255,0.08)";
+    ctx.beginPath();
+    ctx.ellipse(0, 0, w / 2, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillRect(-w / 2, 0, w, h);
+    ctx.beginPath();
+    ctx.ellipse(0, h, w / 2, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    const liq = h * 0.72;
+    const grd = ctx.createLinearGradient(0, h - liq, 0, h);
+    grd.addColorStop(0, "rgba(80,230,160,0.5)");
+    grd.addColorStop(1, "rgba(30,140,90,0.65)");
+    ctx.fillStyle = grd;
+    ctx.fillRect(-w / 2 + 1, h - liq, w - 2, liq);
+    ctx.fillStyle = "rgba(220,255,235,0.55)";
+    for (let i = 0; i < 4; i += 1) {
+      const bt = (t * 0.6 + i * 38) % liq;
+      ctx.beginPath();
+      ctx.arc(-5 + (i % 2) * 9, h - bt, 1.4 + (i % 2), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.strokeStyle = "rgba(200,235,255,0.22)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-w / 2 + 3, 6);
+    ctx.lineTo(-w / 2 + 3, h - 6);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawCutsceneLabBg(t) {
+    ctx.fillStyle = "rgba(36,66,98,0.22)";
+    ctx.fillRect(0, H * 0.6, W, H * 0.4);
+    ctx.strokeStyle = "rgba(90,150,200,0.14)";
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 8; i += 1) {
+      const x = (i / 8) * W;
+      ctx.beginPath();
+      ctx.moveTo(x, H * 0.6);
+      ctx.lineTo(W / 2 + (x - W / 2) * 2.6, H);
+      ctx.stroke();
+    }
+    for (let j = 1; j <= 4; j += 1) {
+      const y = H * 0.6 + j * j * 9;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+    }
+    for (let i = 0; i < 4; i += 1) {
+      drawLabTube(46 + i * 132, 78, t + i * 30);
+    }
+    for (let i = 0; i < 6; i += 1) {
+      const on = Math.sin(t * 0.15 + i * 1.3) > 0;
+      ctx.fillStyle = on ? "rgba(120,255,180,0.9)" : "rgba(60,90,70,0.5)";
+      ctx.beginPath();
+      ctx.arc(34 + i * 84, 26, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function drawCutsceneForestBg(t) {
+    ctx.fillStyle = "rgba(232,242,255,0.92)";
+    ctx.beginPath();
+    ctx.arc(W - 78, 96, 32, 0, Math.PI * 2);
+    ctx.fill();
+    const mg = ctx.createRadialGradient(W - 78, 96, 8, W - 78, 96, 66);
+    mg.addColorStop(0, "rgba(200,220,255,0.22)");
+    mg.addColorStop(1, "rgba(200,220,255,0)");
+    ctx.fillStyle = mg;
+    ctx.beginPath();
+    ctx.arc(W - 78, 96, 66, 0, Math.PI * 2);
+    ctx.fill();
+    for (let i = 0; i < 32; i += 1) {
+      const sx = (i * 137) % W;
+      const sy = (i * 53) % (H * 0.5);
+      const tw = 0.35 + 0.6 * Math.abs(Math.sin(t * 0.05 + i));
+      ctx.fillStyle = "rgba(255,255,255," + tw.toFixed(2) + ")";
+      ctx.fillRect(sx, sy, 1.6, 1.6);
+    }
+    ctx.fillStyle = "rgba(8,22,16,0.55)";
+    for (let i = 0; i < 6; i += 1) {
+      const tx = i * 90 - 10;
+      ctx.beginPath();
+      ctx.moveTo(tx, H);
+      ctx.lineTo(tx + 22, H * 0.42);
+      ctx.lineTo(tx + 48, H);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.fillStyle = "rgba(20,45,28,0.85)";
+    ctx.fillRect(0, H * 0.82, W, H * 0.18);
+    ctx.strokeStyle = "rgba(70,50,30,0.5)";
+    ctx.lineWidth = 7;
+    ctx.lineCap = "round";
+    for (let i = 0; i < 4; i += 1) {
+      const by = 210 + i * 120;
+      ctx.beginPath();
+      ctx.moveTo(-10, by);
+      ctx.lineTo(W + 10, by - 42);
+      ctx.stroke();
+    }
+    for (let i = 0; i < 14; i += 1) {
+      const fx = (i * 90 + t * (0.4 + (i % 3) * 0.2)) % W;
+      const fy = H * 0.3 + Math.sin(t * 0.04 + i) * 40 + ((i * 37) % 200);
+      const fa = 0.25 + 0.5 * Math.abs(Math.sin(t * 0.08 + i * 1.3));
+      ctx.fillStyle = "rgba(255,230,140," + fa.toFixed(2) + ")";
+      ctx.beginPath();
+      ctx.arc(fx, fy, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   function drawCutscene() {
@@ -4371,114 +4517,116 @@
     const phase = cutscene.phase;
     const t = cutscene.t;
     const gt = t * 0.06;
-
-    // background
+    const dur = CUTSCENE_PHASES[phase] || 200;
+    const fadeIn = clamp(t / 18, 0, 1);
+    const fadeOut = clamp((dur - t) / 16, 0, 1);
+    const sceneA = Math.min(fadeIn, fadeOut);
     const lab = phase <= 1;
+
     const g = ctx.createLinearGradient(0, 0, 0, H);
     if (lab) {
-      g.addColorStop(0, "#1a2230");
-      g.addColorStop(1, "#2c3a4c");
+      g.addColorStop(0, "#0e1622");
+      g.addColorStop(0.55, "#16263a");
+      g.addColorStop(1, "#0a121c");
     } else {
-      g.addColorStop(0, "#16261d");
-      g.addColorStop(0.5, "#27432f");
-      g.addColorStop(1, "#3a5f3f");
+      g.addColorStop(0, "#0b1830");
+      g.addColorStop(0.45, "#16352f");
+      g.addColorStop(1, "#1f4a36");
     }
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
 
-    if (lab) {
-      ctx.strokeStyle = "rgba(120,160,200,0.12)";
-      ctx.lineWidth = 1;
-      for (let i = 0; i < 6; i += 1) {
-        ctx.strokeRect(20 + i * 80, 60, 60, 80);
-      }
-      ctx.fillStyle = "rgba(120,200,255,0.10)";
-      for (let i = 0; i < 5; i += 1) {
-        ctx.fillRect(40 + i * 95, 150, 30, 50);
-      }
-    } else {
-      ctx.strokeStyle = "rgba(60,90,60,0.5)";
-      ctx.lineWidth = 8;
-      for (let i = 0; i < 5; i += 1) {
-        const by = 120 + i * 110;
-        ctx.beginPath();
-        ctx.moveTo(0, by);
-        ctx.lineTo(W, by - 30);
-        ctx.stroke();
-      }
-    }
+    ctx.save();
+    ctx.globalAlpha = 0.4 + sceneA * 0.6;
+    if (lab) drawCutsceneLabBg(t); else drawCutsceneForestBg(t);
+    ctx.restore();
 
+    ctx.save();
+    ctx.globalAlpha = sceneA;
+
+    let captionLines = null;
     if (phase === 0) {
-      drawScientist(W / 2 - 70, 220, 2.0, t);
-      drawScientist(W / 2 + 70, 220, 2.0, t + 30);
-      drawMiniChin(W / 2, 320, 1.2, "standard", t, false);
-      // cage bars
-      ctx.strokeStyle = "rgba(200,210,220,0.6)";
+      drawScientist(W / 2 - 72, 230, 2.1, t);
+      drawScientist(W / 2 + 72, 230, 2.1, t + 30);
+      // cage
+      ctx.fillStyle = "rgba(20,28,40,0.45)";
+      ctx.fillRect(W / 2 - 42, 296, 84, 66);
+      drawMiniChin(W / 2 - 14, 332, 1.0, "white", t, false);
+      drawMiniChin(W / 2 + 16, 336, 1.0, "standard", t + 25, true);
+      ctx.strokeStyle = "rgba(210,220,235,0.7)";
       ctx.lineWidth = 2;
       for (let i = -3; i <= 3; i += 1) {
         ctx.beginPath();
-        ctx.moveTo(W / 2 + i * 12, 296);
-        ctx.lineTo(W / 2 + i * 12, 346);
+        ctx.moveTo(W / 2 + i * 13, 296);
+        ctx.lineTo(W / 2 + i * 13, 362);
         ctx.stroke();
       }
-      drawCutsceneCaption(["Лаборатория «Дикий Лес».", "Учёные держат шиншилл в клетках…"]);
+      ctx.strokeRect(W / 2 - 42, 296, 84, 66);
+      captionLines = ["Лаборатория «Дикий Лес».", "Учёные держат шиншилл в клетках…"];
     } else if (phase === 1) {
-      drawScientist(60, 200, 2.1, t);
-      drawScientist(W - 60, 200, 2.1, t + 40);
-      // released fox
-      const fxx = 90 + Math.sin(gt) * 30;
-      drawCutsceneFox(fxx, 330, 1);
-      // released snake
-      drawCutsceneSnake(W - 120, 360, t);
-      drawCutsceneCaption(["Учёные выпустили лис и змей,", "чтобы переловить всех шиншилл!"]);
+      drawScientist(58, 210, 2.2, t);
+      drawScientist(W - 58, 210, 2.2, t + 40);
+      const fxx = 110 + Math.sin(gt) * 36;
+      drawCutsceneFox(fxx, 340, 1);
+      drawCutsceneFox(W - 150 + Math.cos(gt) * 30, 300, -1);
+      drawCutsceneSnake(W - 150, 380, t);
+      captionLines = ["Учёные выпустили лис и змей,", "чтобы переловить всех шиншилл!"];
     } else if (phase === 2) {
-      const flow = (t * 2.4) % (W + 120);
-      const climb = Math.min(t * 0.5, 150);
+      const climb = Math.min(t * 0.5, 170);
       for (let i = 0; i < cutscene.runners.length; i += 1) {
         const r = cutscene.runners[i];
-        const x = W - 40 - i * 46 - (i % 2) * 8;
-        const y = 260 + i * 60 - climb + Math.sin(gt * 2 + r.phase) * 8;
+        const x = W - 56 - i * 46 - (i % 2) * 8;
+        const hop = Math.abs(Math.sin(gt * 2.2 + r.phase)) * 14;
+        const y = 300 + i * 58 - climb - hop;
         drawMiniChin(x, y, 1.0, r.skin, t + i * 20, true);
       }
-      drawCutsceneFox(W - 10 - (t * 1.5 % 120), 420, 1);
-      drawCutsceneSnake(40, 250, t);
-      // saws launched
+      drawCutsceneFox(W - 10 - ((t * 1.5) % 130), 470, 1);
+      drawCutsceneSnake(30, 300, t);
       for (let i = 0; i < 3; i += 1) {
-        const sx = ((t * 4 + i * 160) % (W + 80)) - 40;
-        drawCutsceneSaw(sx, 150 + i * 90, t);
+        const sx = ((t * 4 + i * 170) % (W + 80)) - 40;
+        drawCutsceneSaw(sx, 150 + i * 95, t);
       }
-      drawCutsceneCaption(["Но шиншиллы вырвались наружу", "и поскакали вверх по веткам!"]);
+      captionLines = ["Но шиншиллы вырвались наружу", "и поскакали вверх по веткам!"];
     } else if (phase === 3) {
-      drawScientist(W / 2 - 80, 230, 2.2, t * 0.3);
-      drawScientist(W / 2 + 80, 230, 2.2, t * 0.3 + 20);
-      // rainbow chin caught in net
-      const shake = Math.sin(t * 0.5) * 2;
-      drawMiniChin(W / 2 + shake, 250, 1.3, "rainbow", t, false);
-      ctx.strokeStyle = "rgba(230,235,245,0.7)";
+      drawScientist(W / 2 - 82, 250, 2.3, t * 0.3);
+      drawScientist(W / 2 + 82, 250, 2.3, t * 0.3 + 20);
+      const shake = Math.sin(t * 0.5) * 2.5;
+      drawMiniChin(W / 2 + shake, 240, 1.25, "rainbow", t, false);
+      // net
+      ctx.strokeStyle = "rgba(235,240,250,0.75)";
       ctx.lineWidth = 1.4;
       for (let i = -4; i <= 4; i += 1) {
         ctx.beginPath();
-        ctx.moveTo(W / 2 - 30 + i * 7, 210);
-        ctx.lineTo(W / 2 - 50 + i * 7, 300);
+        ctx.moveTo(W / 2 - 4 + i * 9, 196);
+        ctx.lineTo(W / 2 - 4 + i * 12, 296);
         ctx.stroke();
       }
-      for (let j = 0; j < 5; j += 1) {
+      for (let j = 0; j < 6; j += 1) {
         ctx.beginPath();
-        ctx.moveTo(W / 2 - 50, 220 + j * 18);
-        ctx.lineTo(W / 2 + 50, 215 + j * 18);
+        ctx.moveTo(W / 2 - 48, 210 + j * 16);
+        ctx.lineTo(W / 2 + 48, 210 + j * 16);
         ctx.stroke();
       }
-      drawCutsceneCaption(["…только радужную успели поймать сетью!"]);
+      captionLines = ["…только радужную успели поймать сетью!"];
     } else {
-      // call to action
-      ctx.fillStyle = "rgba(0,0,0,0.25)";
+      const pulse = 88 + Math.sin(gt) * 8;
+      const halo = ctx.createRadialGradient(W / 2, 210, 10, W / 2, 210, pulse);
+      halo.addColorStop(0, "rgba(255,120,60,0.28)");
+      halo.addColorStop(1, "rgba(255,120,60,0)");
+      ctx.fillStyle = halo;
       ctx.beginPath();
-      ctx.arc(W / 2, 200, 90 + Math.sin(gt) * 6, 0, Math.PI * 2);
+      ctx.arc(W / 2, 210, pulse, 0, Math.PI * 2);
       ctx.fill();
-      drawMiniChin(W / 2 - 50, 230, 1.3, "standard", t, false);
-      drawCutsceneFoxKing(W / 2 + 50, 210, t);
-      drawCutsceneCaption(["Останови злодеев и освободи её!", "Впереди — босс лиса-король."]);
+      drawMiniChin(W / 2 - 54, 240, 1.3, "rainbow", t, false);
+      drawCutsceneFoxKing(W / 2 + 54, 220, t);
+      captionLines = ["Останови злодеев и освободи её!", "Впереди — босс лиса-король."];
     }
+
+    ctx.restore();
+
+    drawCutsceneVignette();
+    drawCutsceneLetterbox();
+    if (captionLines) drawCutsceneCaption(captionLines, sceneA);
   }
 
   function drawCutsceneFox(x, y, dir) {
