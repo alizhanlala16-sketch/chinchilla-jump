@@ -1481,7 +1481,7 @@
   let shields = [];
   let lasers = [];
   let chests = [];
-  let nextChestHeight = 2000;
+  let nextChestHeight = 1000;
   let paused = false;
   let secretBoss = false;
   let cutscene = null;
@@ -1639,7 +1639,7 @@
     snake = null;
     lastSnakeSpawn = 0;
     chests = [];
-    nextChestHeight = 2000;
+    nextChestHeight = 600 + Math.floor(Math.random() * 1200);
     paused = false;
     secretBoss = false;
     cutscene = null;
