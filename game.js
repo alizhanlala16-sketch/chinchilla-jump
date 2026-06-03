@@ -1158,7 +1158,7 @@
           }
           score += 200;
           if (secretBoss) {
-            onSecretBossDefeated();
+            startScientistBoss();
           } else if (portal) {
             portal.hidden = false;
             portal.active = true;
@@ -1486,6 +1486,9 @@
   let nextChestHeight = 1000;
   let paused = false;
   let secretBoss = false;
+  let sciBoss = false;
+  let bossSci = null;
+  let sciBullets = [];
   let cutscene = null;
 
   const forestTreesFar = [];
@@ -1644,6 +1647,9 @@
     nextChestHeight = 600 + Math.floor(Math.random() * 1200);
     paused = false;
     secretBoss = false;
+    sciBoss = false;
+    bossSci = null;
+    sciBullets = [];
     cutscene = null;
 
     if (gameMode === "levels") {
@@ -2824,6 +2830,9 @@
       cameraX = 0;
       const targetCameraY = player.y - (H - HUD_SAFE_BOTTOM - 120);
       cameraY += (targetCameraY - cameraY) * 0.12;
+    } else if (sciBoss) {
+      cameraX = 0;
+      cameraY = 0;
     } else if (gameMode !== "levels") {
       cameraX = 0;
       const targetCameraY = player.y - CAMERA_FOLLOW;
@@ -2920,6 +2929,9 @@
 
   function endGame() {
     state = "over";
+    sciBoss = false;
+    bossSci = null;
+    sciBullets = [];
     setPlayingUi(false);
     keys.delete("ArrowLeft");
     keys.delete("ArrowRight");
@@ -3606,10 +3618,428 @@
     updateHud();
   }
 
+  const SCI_GROUND_Y = H - 50;
+  function startScientistBoss() {
+    cutscene = null;
+    gameMode = "arcade";
+    secretBoss = false;
+    sciBoss = true;
+    bossFox = null;
+    paused = false;
+    cameraX = 0;
+    cameraY = 0;
+    score = score || 0;
+    maxHeight = 0;
+    particles = [];
+    platforms = [];
+    hays = [];
+    saws = [];
+    foxes = [];
+    knives = [];
+    cannons = [];
+    cannonballs = [];
+    snake = null;
+    squirrels = [];
+    apples = [];
+    rockets = [];
+    shields = [];
+    lasers = [];
+    chests = [];
+    sciBullets = [];
+    portal = null;
+    player.lives = 3;
+    player.invincibleTimer = 0;
+    player.rocketTimer = 0;
+    player.shieldTimer = 0;
+    player.laserTimer = 0;
+    player.vx = 0;
+    player.vy = 0;
+    player.facing = 1;
+    player.squash = 1;
+    player.jumpsLeft = 2;
+    player.standingOn = null;
+
+    worldWidth = W;
+    // full-width floor + two crates to climb on
+    platforms.push(makePlatform(-20, SCI_GROUND_Y, W + 40, "log"));
+    platforms.push(makePlatform(70, SCI_GROUND_Y - 96, 70, "grass"));
+    platforms.push(makePlatform(W - 150, SCI_GROUND_Y - 120, 80, "grass"));
+
+    const hp = 9;
+    bossSci = {
+      x: W - 90, y: SCI_GROUND_Y, hp: hp, maxHp: hp,
+      phase: "walk", phaseTimer: 150, dir: -1, fireTimer: 70,
+      tiredT: 0, hurtT: 0, hitFlash: 0, walkAnim: 0, recoil: 0, headDuck: 0,
+    };
+    player.x = 70;
+    player.y = SCI_GROUND_Y - 40;
+    highestPlatformY = SCI_GROUND_Y - 200;
+
+    state = "playing";
+    levelBannerText = "Учёный! Уворачивайся, а когда он устанет — прыгни ему на голову";
+    levelBannerTimer = 260;
+    updateHud();
+  }
+
+  function spawnSciBullet() {
+    if (!bossSci) return;
+    const gx = bossSci.x + bossSci.dir * 34;
+    const gy = bossSci.y - 56;
+    const ang = Math.atan2(player.y - gy, player.x - gx);
+    const speed = 5.4;
+    sciBullets.push({
+      x: gx, y: gy,
+      vx: Math.cos(ang) * speed,
+      vy: Math.sin(ang) * speed,
+      life: 150,
+    });
+    bossSci.recoil = 1;
+    playSnort(0.5, 0.3);
+    spawnSparkles(gx, gy);
+  }
+
+  function updateScientistBoss() {
+    if (!sciBoss || !bossSci || state !== "playing") return;
+    const b = bossSci;
+    if (b.hitFlash > 0) b.hitFlash -= 1;
+    if (b.recoil > 0) b.recoil *= 0.82;
+
+    if (b.phase === "walk") {
+      b.walkAnim += 0.2;
+      b.headDuck += (0 - b.headDuck) * 0.2;
+      b.dir = player.x < b.x ? -1 : 1;
+      if (Math.abs(player.x - b.x) > 60) {
+        b.x += b.dir * 1.4;
+      }
+      b.x = clamp(b.x, 50, W - 50);
+      b.fireTimer -= 1;
+      if (b.fireTimer <= 0) {
+        spawnSciBullet();
+        b.fireTimer = 48 + Math.random() * 28;
+      }
+      b.phaseTimer -= 1;
+      if (b.phaseTimer <= 0) {
+        b.phase = "tired";
+        b.tiredT = 150;
+      }
+    } else if (b.phase === "tired") {
+      b.headDuck += (1 - b.headDuck) * 0.12;
+      b.tiredT -= 1;
+      if (b.tiredT <= 0) {
+        b.phase = "walk";
+        b.phaseTimer = 150 + Math.random() * 60;
+        b.fireTimer = 30;
+      }
+    }
+
+    // update bullets
+    for (const bl of sciBullets) {
+      bl.x += bl.vx;
+      bl.y += bl.vy;
+      bl.vy += 0.05;
+      bl.life -= 1;
+      const dx = player.x - bl.x;
+      const dy = player.y - bl.y;
+      if (Math.hypot(dx, dy) < player.w * 0.4 + 5) {
+        bl.life = 0;
+        if (player.invincibleTimer <= 0 && player.shieldTimer <= 0 && player.rocketTimer <= 0) {
+          playSqueak();
+        }
+        damagePlayer();
+      }
+    }
+    sciBullets = sciBullets.filter(function (bl) {
+      return bl.life > 0 && bl.x > -20 && bl.x < W + 20 && bl.y < H + 20;
+    });
+
+    // jump on head only while tired
+    const headY = b.y - 64 + b.headDuck * 26;
+    if (b.phase === "tired" && player.vy > 1) {
+      const dx = player.x - b.x;
+      const dy = player.y - headY;
+      if (Math.abs(dx) < 30 && dy > -22 && dy < 24) {
+        b.hp -= 1;
+        b.hitFlash = 18;
+        b.phase = "walk";
+        b.phaseTimer = 130 + Math.random() * 50;
+        b.fireTimer = 40;
+        player.vy = JUMP_FORCE * 0.95;
+        spawnSparkles(b.x, headY);
+        spawnFurBurst(b.x, headY);
+        playSnort(1.6, 0.35);
+        score += 40;
+        updateHud();
+        if (b.hp <= 0) {
+          for (let i = 0; i < 10; i += 1) spawnSparkles(b.x + rand(-30, 30), b.y - rand(0, 70));
+          score += 300;
+          onSecretBossDefeated();
+          return;
+        }
+      }
+    } else if (b.phase === "walk") {
+      // body contact damage while active
+      const dx = player.x - b.x;
+      const dy = player.y - (b.y - 32);
+      if (Math.abs(dx) < 20 && Math.abs(dy) < 40) {
+        if (player.invincibleTimer <= 0 && player.shieldTimer <= 0 && player.rocketTimer <= 0) {
+          playSqueak();
+        }
+        damagePlayer();
+      }
+    }
+
+    if (player.lives <= 0) {
+      sciBoss = false;
+    }
+  }
+
+  function drawSciBullets() {
+    for (const bl of sciBullets) {
+      ctx.save();
+      ctx.translate(bl.x, bl.y - cameraY);
+      const glow = ctx.createRadialGradient(0, 0, 1, 0, 0, 8);
+      glow.addColorStop(0, "rgba(255,220,120,0.9)");
+      glow.addColorStop(1, "rgba(255,140,40,0)");
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(0, 0, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#fff3c0";
+      ctx.beginPath();
+      ctx.arc(0, 0, 2.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function drawSciArenaBg() {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#16263a");
+    g.addColorStop(0.6, "#102032");
+    g.addColorStop(1, "#0a141f");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    const tnow = Date.now() * 0.001;
+    // wall tubes
+    for (let i = 0; i < 4; i += 1) {
+      drawLabTube(46 + i * 132, 70, tnow * 30 + i * 30);
+    }
+    // pipes
+    ctx.strokeStyle = "rgba(90,150,200,0.18)";
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(0, 40); ctx.lineTo(W, 40);
+    ctx.moveTo(0, 240); ctx.lineTo(W, 240);
+    ctx.stroke();
+    // blinking lights
+    for (let i = 0; i < 7; i += 1) {
+      const on = Math.sin(tnow * 4 + i * 1.3) > 0;
+      ctx.fillStyle = on ? "rgba(120,255,180,0.9)" : "rgba(60,90,70,0.5)";
+      ctx.beginPath();
+      ctx.arc(28 + i * 72, 20, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // floor band
+    ctx.fillStyle = "rgba(36,52,70,0.6)";
+    ctx.fillRect(0, SCI_GROUND_Y - 6, W, H - (SCI_GROUND_Y - 6));
+    ctx.strokeStyle = "rgba(90,150,200,0.2)";
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 8; i += 1) {
+      const x = (i / 8) * W;
+      ctx.beginPath();
+      ctx.moveTo(x, SCI_GROUND_Y);
+      ctx.lineTo(W / 2 + (x - W / 2) * 1.8, H);
+      ctx.stroke();
+    }
+  }
+
+  function drawScientistBoss() {
+    if (!sciBoss || !bossSci) return;
+    const b = bossSci;
+    drawSciBullets();
+    const baseY = b.y - cameraY;
+    const flash = b.hitFlash > 0 && Math.floor(b.hitFlash / 3) % 2 === 0;
+    const duck = b.headDuck;
+    ctx.save();
+    ctx.translate(b.x, baseY);
+    ctx.scale(b.dir, 1);
+
+    // shadow
+    ctx.fillStyle = "rgba(0,0,0,0.22)";
+    ctx.beginPath();
+    ctx.ellipse(0, 2, 30, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    const lean = duck * 12;
+    // legs
+    ctx.strokeStyle = "#39434f";
+    ctx.lineWidth = 11;
+    ctx.lineCap = "round";
+    const stride = Math.sin(b.walkAnim) * 8 * (b.phase === "walk" ? 1 : 0);
+    ctx.beginPath();
+    ctx.moveTo(-9, -34); ctx.lineTo(-9 + stride, -2);
+    ctx.moveTo(9, -34); ctx.lineTo(9 - stride, -2);
+    ctx.stroke();
+    ctx.fillStyle = "#1c222b";
+    ctx.beginPath();
+    ctx.ellipse(-9 + stride, -1, 9, 4, 0, 0, Math.PI * 2);
+    ctx.ellipse(9 - stride, -1, 9, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // coat body
+    ctx.save();
+    ctx.translate(0, -34);
+    ctx.rotate(duck * 0.12);
+    ctx.fillStyle = flash ? "#ffd2d2" : "#f2f5f9";
+    ctx.beginPath();
+    ctx.moveTo(-26, -34);
+    ctx.lineTo(26, -34);
+    ctx.lineTo(20, 8);
+    ctx.lineTo(-20, 8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "rgba(190,205,220,0.5)";
+    ctx.beginPath();
+    ctx.moveTo(4, -34); ctx.lineTo(26, -34); ctx.lineTo(20, 8); ctx.lineTo(4, 8); ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#c4ccd4";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, -34); ctx.lineTo(0, 8);
+    ctx.stroke();
+    // tie
+    ctx.fillStyle = "#5fa8d8";
+    ctx.beginPath();
+    ctx.moveTo(-4, -30); ctx.lineTo(4, -30); ctx.lineTo(2, -10); ctx.lineTo(-2, -10); ctx.closePath();
+    ctx.fill();
+    // badge
+    ctx.fillStyle = "#ffd24a";
+    ctx.fillRect(8, -20, 9, 12);
+    ctx.fillStyle = "#7a5a10";
+    ctx.fillRect(9.6, -17, 6, 2);
+
+    // arm holding pistol (front)
+    const recoil = b.recoil * 6;
+    ctx.strokeStyle = flash ? "#ffd2d2" : "#f2f5f9";
+    ctx.lineWidth = 9;
+    ctx.beginPath();
+    ctx.moveTo(16, -22); ctx.lineTo(34 - recoil, -22 + lean);
+    ctx.stroke();
+    ctx.fillStyle = "#cfe6f4";
+    ctx.beginPath();
+    ctx.arc(34 - recoil, -22 + lean, 4, 0, Math.PI * 2);
+    ctx.fill();
+    // pistol
+    ctx.fillStyle = "#3a4654";
+    ctx.fillRect(34 - recoil, -25 + lean, 14, 5);
+    ctx.fillRect(36 - recoil, -20 + lean, 5, 8);
+    if (b.recoil > 0.4) {
+      ctx.fillStyle = "rgba(255,210,120," + b.recoil.toFixed(2) + ")";
+      ctx.beginPath();
+      ctx.arc(50 - recoil, -22 + lean, 5 * b.recoil, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // head
+    ctx.save();
+    ctx.translate(0, -64 + duck * 26);
+    ctx.rotate(duck * 0.3);
+    ctx.fillStyle = "#f0c9a8";
+    ctx.beginPath();
+    ctx.arc(0, 0, 15, 0, Math.PI * 2);
+    ctx.fill();
+    // hair
+    ctx.fillStyle = "#3a3530";
+    ctx.beginPath();
+    ctx.arc(0, -4, 15.4, Math.PI * 1.02, Math.PI * 1.98);
+    ctx.fill();
+    // glasses
+    ctx.strokeStyle = "#222";
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.arc(-5, -1, 4.6, 0, Math.PI * 2);
+    ctx.arc(6, -1, 4.6, 0, Math.PI * 2);
+    ctx.moveTo(-0.4, -1); ctx.lineTo(1.4, -1);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(180,220,255,0.6)";
+    ctx.beginPath();
+    ctx.arc(-5, -1, 3.6, 0, Math.PI * 2);
+    ctx.arc(6, -1, 3.6, 0, Math.PI * 2);
+    ctx.fill();
+    // expression
+    if (b.phase === "tired") {
+      // panting open mouth + sweat
+      ctx.fillStyle = "#7a3b30";
+      ctx.beginPath();
+      ctx.ellipse(0, 8, 3.5, 2.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "rgba(120,200,255,0.85)";
+      ctx.beginPath();
+      ctx.arc(12, -2, 2, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.strokeStyle = "#a06a4a";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(-3, 8); ctx.lineTo(3, 8);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    ctx.restore();
+
+    if (b.phase === "tired") {
+      ctx.save();
+      ctx.globalAlpha = 0.6 + Math.sin(Date.now() * 0.01) * 0.3;
+      ctx.fillStyle = "#ffe08a";
+      ctx.font = "bold 13px Segoe UI, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("устал! прыгай!", b.x, baseY - 64 + duck * 26 - 28);
+      ctx.restore();
+    }
+  }
+
+  function drawSciHpBar() {
+    if (!sciBoss || !bossSci) return;
+    const b = bossSci;
+    const barW = W * 0.7;
+    const barH = 14;
+    const x = (W - barW) / 2;
+    const y = 18;
+    ctx.save();
+    ctx.fillStyle = "rgba(8,8,20,0.7)";
+    roundRect(x - 4, y - 4, barW + 8, barH + 8, 8);
+    ctx.fill();
+    ctx.fillStyle = "rgba(40,10,10,0.7)";
+    roundRect(x, y, barW, barH, 6);
+    ctx.fill();
+    const ratio = Math.max(0, b.hp / b.maxHp);
+    const grad = ctx.createLinearGradient(x, y, x + barW, y);
+    grad.addColorStop(0, "#5fa8d8");
+    grad.addColorStop(1, "#9ad0ff");
+    ctx.fillStyle = grad;
+    roundRect(x, y, barW * ratio, barH, 6);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(220,235,255,0.85)";
+    ctx.lineWidth = 1.5;
+    roundRect(x, y, barW, barH, 6);
+    ctx.stroke();
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 12px Segoe UI, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("Учёный · " + b.hp + " / " + b.maxHp, W / 2, y + barH / 2);
+    ctx.restore();
+  }
+
   function onSecretBossDefeated() {
     unlockRainbow();
     setSelectedSkin("rainbow");
     secretBoss = false;
+    sciBoss = false;
+    bossSci = null;
+    sciBullets = [];
     state = "over";
     const modal = document.getElementById("secret-victory");
     if (modal) { modal.classList.remove("hidden"); modal.classList.add("visible"); }
@@ -3619,6 +4049,9 @@
     const modal = document.getElementById("secret-victory");
     if (modal) { modal.classList.add("hidden"); modal.classList.remove("visible"); }
     secretBoss = false;
+    sciBoss = false;
+    bossSci = null;
+    sciBullets = [];
     bossFox = null;
     state = "menu";
     overlay.classList.remove("hidden");
@@ -3644,6 +4077,7 @@
 
   function drawBackground() {
     ctx.clearRect(0, 0, W, H);
+    if (sciBoss) { drawSciArenaBg(); return; }
     const bgHeight = Math.max(0, Math.floor((INITIAL_Y - cameraY) / 10));
     const blend = getThemeBlend(bgHeight);
     drawTheme(blend.a, 1);
@@ -4292,61 +4726,126 @@
     ctx.translate(x, y);
     ctx.scale(sc, sc);
     const walk = Math.sin(t * 0.25 + x) * 3;
-    // legs
-    ctx.strokeStyle = "#2a3340";
-    ctx.lineWidth = 4;
+    // shadow
+    ctx.fillStyle = "rgba(0,0,0,0.18)";
+    ctx.beginPath();
+    ctx.ellipse(0, 27, 12, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // legs (trousers + shoes)
+    ctx.strokeStyle = "#39434f";
+    ctx.lineWidth = 4.5;
     ctx.lineCap = "round";
     ctx.beginPath();
-    ctx.moveTo(-4, 14); ctx.lineTo(-4 + walk, 26);
-    ctx.moveTo(4, 14); ctx.lineTo(4 - walk, 26);
+    ctx.moveTo(-4, 14); ctx.lineTo(-4 + walk, 25);
+    ctx.moveTo(4, 14); ctx.lineTo(4 - walk, 25);
     ctx.stroke();
-    // lab coat
-    ctx.fillStyle = "#eef2f6";
+    ctx.fillStyle = "#1c222b";
     ctx.beginPath();
-    ctx.moveTo(-10, -8);
-    ctx.lineTo(10, -8);
-    ctx.lineTo(8, 16);
-    ctx.lineTo(-8, 16);
+    ctx.ellipse(-4 + walk, 26, 3.4, 2, 0, 0, Math.PI * 2);
+    ctx.ellipse(4 - walk, 26, 3.4, 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // lab coat body
+    ctx.fillStyle = "#f2f5f9";
+    ctx.beginPath();
+    ctx.moveTo(-11, -8);
+    ctx.lineTo(11, -8);
+    ctx.lineTo(9, 17);
+    ctx.lineTo(-9, 17);
     ctx.closePath();
     ctx.fill();
+    // coat shading
+    ctx.fillStyle = "rgba(190,205,220,0.5)";
+    ctx.beginPath();
+    ctx.moveTo(2, -8); ctx.lineTo(11, -8); ctx.lineTo(9, 17); ctx.lineTo(2, 17);
+    ctx.closePath();
+    ctx.fill();
+    // lapels
     ctx.strokeStyle = "#c4ccd4";
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(0, -8); ctx.lineTo(0, 16);
+    ctx.moveTo(0, -8); ctx.lineTo(0, 17);
     ctx.stroke();
+    ctx.fillStyle = "#3a4654";
+    ctx.beginPath();
+    ctx.moveTo(-4, -8); ctx.lineTo(0, -3); ctx.lineTo(-1, -8); ctx.closePath();
+    ctx.moveTo(4, -8); ctx.lineTo(0, -3); ctx.lineTo(1, -8); ctx.closePath();
+    ctx.fill();
+    // tie
     ctx.fillStyle = "#5fa8d8";
     ctx.beginPath();
-    ctx.moveTo(-2, -8); ctx.lineTo(2, -8); ctx.lineTo(0, -2); ctx.closePath();
+    ctx.moveTo(-1.6, -6); ctx.lineTo(1.6, -6); ctx.lineTo(0.9, 2); ctx.lineTo(-0.9, 2); ctx.closePath();
     ctx.fill();
-    // arms
-    ctx.strokeStyle = "#eef2f6";
-    ctx.lineWidth = 4;
+    // buttons
+    ctx.fillStyle = "#aeb8c2";
     ctx.beginPath();
-    ctx.moveTo(-9, -5); ctx.lineTo(-14, 6);
-    ctx.moveTo(9, -5); ctx.lineTo(14, 6);
+    ctx.arc(0, 4, 0.9, 0, Math.PI * 2);
+    ctx.arc(0, 9, 0.9, 0, Math.PI * 2);
+    ctx.fill();
+    // ID badge
+    ctx.fillStyle = "#ffd24a";
+    ctx.fillRect(3.5, 1, 4, 5);
+    ctx.fillStyle = "#7a5a10";
+    ctx.fillRect(4.2, 2, 2.6, 1);
+    // arms + gloves
+    ctx.strokeStyle = "#f2f5f9";
+    ctx.lineWidth = 4.5;
+    ctx.beginPath();
+    ctx.moveTo(-9, -5); ctx.lineTo(-14, 7);
+    ctx.moveTo(9, -5); ctx.lineTo(14, 7);
     ctx.stroke();
+    ctx.fillStyle = "#cfe6f4";
+    ctx.beginPath();
+    ctx.arc(-14, 8, 2, 0, Math.PI * 2);
+    ctx.arc(14, 8, 2, 0, Math.PI * 2);
+    ctx.fill();
+    // neck
+    ctx.fillStyle = "#e0b48f";
+    ctx.fillRect(-2, -10, 4, 3);
     // head
     ctx.fillStyle = "#f0c9a8";
     ctx.beginPath();
     ctx.arc(0, -16, 8, 0, Math.PI * 2);
     ctx.fill();
+    // ear
+    ctx.beginPath();
+    ctx.arc(-8, -16, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+    // hair
     ctx.fillStyle = "#3a3530";
     ctx.beginPath();
-    ctx.arc(0, -20, 8, Math.PI, 0);
+    ctx.arc(0, -19, 8.2, Math.PI * 1.04, Math.PI * 1.98);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-7.8, -17); ctx.lineTo(-8.4, -12); ctx.lineTo(-6, -14); ctx.closePath();
+    ctx.moveTo(7.8, -17); ctx.lineTo(8.4, -12); ctx.lineTo(6, -14); ctx.closePath();
     ctx.fill();
     // glasses
     ctx.strokeStyle = "#222";
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.arc(-3, -16, 2.6, 0, Math.PI * 2);
-    ctx.arc(3, -16, 2.6, 0, Math.PI * 2);
-    ctx.moveTo(-0.4, -16); ctx.lineTo(0.4, -16);
+    ctx.arc(-3, -16, 2.7, 0, Math.PI * 2);
+    ctx.arc(3, -16, 2.7, 0, Math.PI * 2);
+    ctx.moveTo(-0.3, -16); ctx.lineTo(0.3, -16);
+    ctx.moveTo(-5.6, -16.4); ctx.lineTo(-7.6, -16.8);
+    ctx.moveTo(5.6, -16.4); ctx.lineTo(7.6, -16.8);
     ctx.stroke();
     ctx.fillStyle = "rgba(180,220,255,0.6)";
     ctx.beginPath();
-    ctx.arc(-3, -16, 2, 0, Math.PI * 2);
-    ctx.arc(3, -16, 2, 0, Math.PI * 2);
+    ctx.arc(-3, -16, 2.1, 0, Math.PI * 2);
+    ctx.arc(3, -16, 2.1, 0, Math.PI * 2);
     ctx.fill();
+    // glasses glare
+    ctx.fillStyle = "rgba(255,255,255,0.8)";
+    ctx.beginPath();
+    ctx.arc(-3.7, -16.7, 0.7, 0, Math.PI * 2);
+    ctx.arc(2.3, -16.7, 0.7, 0, Math.PI * 2);
+    ctx.fill();
+    // mouth
+    ctx.strokeStyle = "#a06a4a";
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(-2, -11.5); ctx.lineTo(2, -11.5);
+    ctx.stroke();
     ctx.restore();
   }
 
@@ -4546,22 +5045,43 @@
 
     let captionLines = null;
     if (phase === 0) {
-      drawScientist(W / 2 - 72, 230, 2.1, t);
-      drawScientist(W / 2 + 72, 230, 2.1, t + 30);
-      // cage
-      ctx.fillStyle = "rgba(20,28,40,0.45)";
-      ctx.fillRect(W / 2 - 42, 296, 84, 66);
-      drawMiniChin(W / 2 - 14, 332, 1.0, "white", t, false);
-      drawMiniChin(W / 2 + 16, 336, 1.0, "standard", t + 25, true);
-      ctx.strokeStyle = "rgba(210,220,235,0.7)";
+      drawScientist(W / 2 - 105, 250, 2.1, t);
+      drawScientist(W / 2 + 105, 250, 2.1, t + 30);
+      // big cage
+      const cgX = W / 2 - 78;
+      const cgY = 270;
+      const cgW = 156;
+      const cgH = 130;
+      ctx.fillStyle = "rgba(16,24,36,0.5)";
+      ctx.fillRect(cgX, cgY, cgW, cgH);
+      // floor tray
+      ctx.fillStyle = "rgba(40,50,64,0.6)";
+      ctx.fillRect(cgX, cgY + cgH - 10, cgW, 10);
+      // small chinchillas inside
+      drawMiniChin(cgX + 34, cgY + cgH - 18, 0.7, "white", t, false);
+      drawMiniChin(cgX + 70, cgY + cgH - 14, 0.7, "standard", t + 25, true);
+      drawMiniChin(cgX + 108, cgY + cgH - 18, 0.7, "black", t + 50, false);
+      drawMiniChin(cgX + 132, cgY + 44, 0.62, "rainbow", t + 70, true);
+      // bars
+      ctx.strokeStyle = "rgba(210,220,235,0.75)";
       ctx.lineWidth = 2;
-      for (let i = -3; i <= 3; i += 1) {
+      for (let i = 0; i <= 10; i += 1) {
+        const bx = cgX + (i / 10) * cgW;
         ctx.beginPath();
-        ctx.moveTo(W / 2 + i * 13, 296);
-        ctx.lineTo(W / 2 + i * 13, 362);
+        ctx.moveTo(bx, cgY);
+        ctx.lineTo(bx, cgY + cgH);
         ctx.stroke();
       }
-      ctx.strokeRect(W / 2 - 42, 296, 84, 66);
+      ctx.beginPath();
+      ctx.moveTo(cgX, cgY + cgH * 0.4); ctx.lineTo(cgX + cgW, cgY + cgH * 0.4);
+      ctx.stroke();
+      // frame
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = "rgba(150,165,185,0.9)";
+      ctx.strokeRect(cgX, cgY, cgW, cgH);
+      // lock
+      ctx.fillStyle = "#ffd24a";
+      ctx.fillRect(W / 2 - 6, cgY + cgH - 6, 12, 10);
       captionLines = ["Лаборатория «Дикий Лес».", "Учёные держат шиншилл в клетках…"];
     } else if (phase === 1) {
       drawScientist(58, 210, 2.2, t);
@@ -4575,10 +5095,10 @@
       const climb = Math.min(t * 0.5, 170);
       for (let i = 0; i < cutscene.runners.length; i += 1) {
         const r = cutscene.runners[i];
-        const x = W - 56 - i * 46 - (i % 2) * 8;
+        const x = W - 56 - i * 42 - (i % 2) * 8;
         const hop = Math.abs(Math.sin(gt * 2.2 + r.phase)) * 14;
         const y = 300 + i * 58 - climb - hop;
-        drawMiniChin(x, y, 1.0, r.skin, t + i * 20, true);
+        drawMiniChin(x, y, 0.78, r.skin, t + i * 20, true);
       }
       drawCutsceneFox(W - 10 - ((t * 1.5) % 130), 470, 1);
       drawCutsceneSnake(30, 300, t);
@@ -4591,7 +5111,7 @@
       drawScientist(W / 2 - 82, 250, 2.3, t * 0.3);
       drawScientist(W / 2 + 82, 250, 2.3, t * 0.3 + 20);
       const shake = Math.sin(t * 0.5) * 2.5;
-      drawMiniChin(W / 2 + shake, 240, 1.25, "rainbow", t, false);
+      drawMiniChin(W / 2 + shake, 240, 0.95, "rainbow", t, false);
       // net
       ctx.strokeStyle = "rgba(235,240,250,0.75)";
       ctx.lineWidth = 1.4;
@@ -4617,7 +5137,7 @@
       ctx.beginPath();
       ctx.arc(W / 2, 210, pulse, 0, Math.PI * 2);
       ctx.fill();
-      drawMiniChin(W / 2 - 54, 240, 1.3, "rainbow", t, false);
+      drawMiniChin(W / 2 - 54, 244, 1.0, "rainbow", t, false);
       drawCutsceneFoxKing(W / 2 + 54, 220, t);
       captionLines = ["Останови злодеев и освободи её!", "Впереди — босс лиса-король."];
     }
@@ -6884,6 +7404,7 @@
     drawSnake();
     drawParticles();
     drawBossFox();
+    drawScientistBoss();
     drawPortal();
     drawRocketAura();
     drawChinchilla();
@@ -6893,6 +7414,7 @@
     drawPortalGuide();
     drawLevelPortalMarker();
     drawBossHpBar();
+    drawSciHpBar();
     drawDoubleJumpIndicator();
     drawLives();
     drawPowerupTimers();
@@ -6922,6 +7444,8 @@
     updateParticles();
     if (secretBoss) {
       updateBossFox();
+    } else if (sciBoss) {
+      updateScientistBoss();
     } else if (gameMode === "levels") {
       updateBossFox();
       updateLevelTransition();
