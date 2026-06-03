@@ -99,15 +99,17 @@
   }
   function refreshRainbowButton() {
     const btn = document.querySelector('#skin-options .cosmetic-btn[data-skin="rainbow"]');
+    const grid = document.getElementById("skin-options");
     if (!btn) return;
     if (isRainbowUnlocked()) {
-      btn.classList.remove("locked");
+      btn.classList.remove("locked", "hidden");
       btn.disabled = false;
       btn.textContent = "Радужная";
+      if (grid) { grid.classList.add("cosmetic-options-4"); grid.classList.remove("cosmetic-options-3"); }
     } else {
-      btn.classList.add("locked");
+      btn.classList.add("hidden");
       btn.disabled = true;
-      btn.textContent = "🔒 Радужная";
+      if (grid) { grid.classList.add("cosmetic-options-3"); grid.classList.remove("cosmetic-options-4"); }
     }
   }
 
