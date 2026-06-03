@@ -13,7 +13,7 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://chinchilla-jump.vercel.app/game">
   <meta property="og:locale" content="ru_RU">
-  <link rel="stylesheet" href="style.css?v=21">
+  <link rel="stylesheet" href="style.css?v=22">
 </head>
 <body class="game-page">
   <a href="index.html" class="home-link">← На главную</a>
@@ -45,23 +45,6 @@
       <div class="overlay-inner">
         <h1>Chinchilla &amp; Jump</h1>
         <p class="subtitle overlay-subtitle">Прыгай по веткам и собирай сено!</p>
-        <details class="controls-fold">
-          <summary>Как играть</summary>
-          <div class="controls">
-            <p class="controls-desktop"><kbd>←</kbd> <kbd>→</kbd> или <kbd>A</kbd> <kbd>D</kbd> — движение (ПК)</p>
-            <p class="controls-desktop"><kbd>Пробел</kbd> / <kbd>↑</kbd> / <kbd>W</kbd> — прыжок (ПК)</p>
-            <p class="controls-mobile">На телефоне: слева <strong>↑</strong> — прыжок, справа <strong>← →</strong> — движение</p>
-            <p>В воздухе ещё раз — двойной прыжок</p>
-            <p class="controls-short">Хрупкие ветки трескаются и восстанавливаются</p>
-            <p class="controls-short">Бонусы: <strong>ракета</strong>, <strong>щит</strong>, <strong>лазеры</strong></p>
-            <p class="controls-desktop"><kbd>M</kbd> — музыка вкл/выкл</p>
-          </div>
-        </details>
-        <div class="player-name-field">
-          <label for="player-name-input">Твоё имя</label>
-          <input id="player-name-input" type="text" maxlength="16" autocomplete="nickname" spellcheck="false" placeholder="Например, Айлана">
-          <p id="player-name-hint" class="player-name-hint hidden">Введи имя для таблицы рекордов</p>
-        </div>
         <div class="cosmetics-panel">
           <canvas id="chinchilla-preview" width="140" height="120" aria-hidden="true"></canvas>
           <div class="cosmetic-group">
@@ -82,6 +65,23 @@
               <button type="button" class="cosmetic-btn hidden" data-hat="bluecap" disabled>Голубая</button>
             </div>
           </div>
+        </div>
+        <details class="controls-fold">
+          <summary>Как играть</summary>
+          <div class="controls">
+            <p class="controls-desktop"><kbd>←</kbd> <kbd>→</kbd> или <kbd>A</kbd> <kbd>D</kbd> — движение (ПК)</p>
+            <p class="controls-desktop"><kbd>Пробел</kbd> / <kbd>↑</kbd> / <kbd>W</kbd> — прыжок (ПК)</p>
+            <p class="controls-mobile">На телефоне: слева <strong>↑</strong> — прыжок, справа <strong>← →</strong> — движение</p>
+            <p>В воздухе ещё раз — двойной прыжок</p>
+            <p class="controls-short">Хрупкие ветки трескаются и восстанавливаются</p>
+            <p class="controls-short">Бонусы: <strong>ракета</strong>, <strong>щит</strong>, <strong>лазеры</strong></p>
+            <p class="controls-desktop"><kbd>M</kbd> — музыка вкл/выкл</p>
+          </div>
+        </details>
+        <div class="player-name-field">
+          <label for="player-name-input">Твоё имя</label>
+          <input id="player-name-input" type="text" maxlength="16" autocomplete="nickname" spellcheck="false" placeholder="Например, Айлана">
+          <p id="player-name-hint" class="player-name-hint hidden">Введи имя для таблицы рекордов</p>
         </div>
       </div>
       <div class="overlay-actions">
@@ -166,6 +166,6 @@
       </div>
     </div>
   </div>
-  <script src="game.js?v=secret-11"></script>
+  <script src="game.js?v=secret-12"></script>
 </body>
 </html>

@@ -157,15 +157,18 @@ body.game-page {
   }
   #overlay .cosmetics-panel {
     margin-bottom: 6px;
-    gap: 6px;
+    padding: 6px;
+    grid-template-columns: 68px minmax(0, 1fr);
+    gap: 5px 8px;
   }
   #overlay #chinchilla-preview {
-    width: 88px;
-    height: 82px;
+    width: 68px;
+    height: 68px;
   }
   #overlay .cosmetic-btn {
-    min-height: 34px !important;
-    padding: 6px 5px !important;
+    min-height: 32px !important;
+    min-width: 62px;
+    padding: 5px 8px !important;
     font-size: 11px !important;
   }
   #overlay .overlay-actions .btn-row {
@@ -262,13 +265,24 @@ body.game-page {
   width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   padding-bottom: 6px;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 200, 120, 0.45) rgba(0, 0, 0, 0.18);
 }
 
-#overlay .overlay-inner::-webkit-scrollbar,
+#overlay .overlay-inner::-webkit-scrollbar {
+  width: 6px;
+}
+#overlay .overlay-inner::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 6px;
+}
+#overlay .overlay-inner::-webkit-scrollbar-thumb {
+  background: rgba(255, 200, 120, 0.45);
+  border-radius: 6px;
+}
+
 .modal-card::-webkit-scrollbar {
   display: none;
   width: 0;
@@ -365,19 +379,21 @@ body.game-page {
   }
   #overlay .cosmetics-panel {
     margin-bottom: 4px;
-    gap: 4px;
+    padding: 6px;
+    grid-template-columns: 64px minmax(0, 1fr);
   }
   #overlay #chinchilla-preview {
-    width: 84px;
-    height: 78px;
+    width: 64px;
+    height: 64px;
   }
   #overlay .cosmetic-label {
-    font-size: 11px;
+    font-size: 10px;
     margin-bottom: 3px;
   }
   #overlay .cosmetic-btn {
-    min-height: 32px !important;
-    padding: 6px 5px !important;
+    min-height: 30px !important;
+    min-width: 58px;
+    padding: 5px 8px !important;
     font-size: 11px !important;
   }
   #overlay .overlay-actions {
@@ -464,12 +480,20 @@ body.game-page {
 
 #overlay h1 {
   font-size: 34px;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
   text-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   background: linear-gradient(135deg, #ffe08a, #ffb347);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  text-align: center;
+}
+
+#overlay .overlay-subtitle {
+  margin-bottom: 8px !important;
+  text-align: center;
+  align-self: center;
+  max-width: 320px;
 }
 
 .subtitle {
@@ -585,70 +609,96 @@ button:hover {
   width: 100%;
   max-width: 100%;
   margin: 0 0 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 8px;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  gap: 6px 10px;
+  align-items: start;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 200, 120, 0.22);
+  border-radius: 14px;
+  flex-shrink: 0;
 }
 
 #chinchilla-preview {
-  align-self: center;
-  width: 100px;
-  height: 92px;
-  border-radius: 14px;
+  grid-row: 1 / span 2;
+  grid-column: 1;
+  width: 76px;
+  height: 76px;
+  border-radius: 12px;
   background:
     radial-gradient(ellipse at 50% 35%, rgba(255, 220, 150, 0.18), transparent 65%),
     linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
   border: 1px solid rgba(255, 200, 120, 0.28);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 12px rgba(0, 0, 0, 0.25);
   display: block;
+  align-self: center;
+  justify-self: center;
 }
 
 .cosmetic-group {
   text-align: left;
   width: 100%;
+  min-width: 0;
+  grid-column: 2;
 }
 
 .cosmetic-label {
   display: block;
-  margin-bottom: 5px;
-  font-size: 12px;
+  margin-bottom: 4px;
+  font-size: 11px;
   font-weight: 600;
-  color: rgba(255, 224, 138, 0.85);
+  color: rgba(255, 224, 138, 0.9);
   letter-spacing: 0.04em;
 }
 
 .cosmetic-options {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   gap: 6px;
   width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 200, 120, 0.5) transparent;
+}
+
+.cosmetic-options::-webkit-scrollbar {
+  height: 4px;
+}
+.cosmetic-options::-webkit-scrollbar-thumb {
+  background: rgba(255, 200, 120, 0.5);
+  border-radius: 4px;
 }
 
 .cosmetic-options-3,
 .cosmetic-options-4,
 .cosmetic-options-2 {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
 }
 
 .cosmetic-btn {
-  width: 100%;
-  min-width: 0;
-  min-height: 36px;
-  padding: 7px 6px !important;
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 68px;
+  min-height: 34px;
+  padding: 6px 10px !important;
   font-size: 12px !important;
   font-weight: 700 !important;
   border-radius: 999px !important;
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
   color: var(--text) !important;
-  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
   box-shadow: none !important;
   cursor: pointer;
   transition: background 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
   line-height: 1.2;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .cosmetic-btn.hidden {
