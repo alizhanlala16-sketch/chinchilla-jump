@@ -13,7 +13,7 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://chinchilla-jump.vercel.app/game">
   <meta property="og:locale" content="ru_RU">
-  <link rel="stylesheet" href="style.css?v=19">
+  <link rel="stylesheet" href="style.css?v=20">
 </head>
 <body class="game-page">
   <a href="index.html" class="home-link">← На главную</a>
@@ -79,6 +79,7 @@
               <button type="button" class="cosmetic-btn" data-hat="none">Без шляпы</button>
               <button type="button" class="cosmetic-btn" data-hat="gentleman">Джентльмен</button>
               <button type="button" class="cosmetic-btn" data-hat="bear">Мишка</button>
+              <button type="button" class="cosmetic-btn hidden" data-hat="bluecap" disabled>Голубая кепка</button>
             </div>
           </div>
         </div>
@@ -151,7 +152,7 @@
     <div id="secret-victory" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="sv-title">
       <div class="modal-card chest-card">
         <h2 id="sv-title">🌈 Радужная шиншилла спасена!</h2>
-        <p class="subtitle">Ты победил босса и освободил радужную шиншиллу. Новый скин разблокирован!</p>
+        <p class="subtitle" id="sv-subtitle">Ты победил босса и освободил радужную шиншиллу. Новый скин разблокирован!</p>
         <div class="btn-row">
           <button id="secret-victory-close" type="button">Ура!</button>
         </div>
@@ -165,6 +166,6 @@
       </div>
     </div>
   </div>
-  <script src="game.js?v=secret-9"></script>
+  <script src="game.js?v=secret-10"></script>
 </body>
 </html>

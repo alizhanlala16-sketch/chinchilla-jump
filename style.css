@@ -680,6 +680,11 @@ button:hover {
   border-color: rgba(255, 200, 230, 0.55) !important;
 }
 
+.cosmetic-btn[data-hat="bluecap"]:not(.hidden) {
+  background: linear-gradient(135deg, rgba(30, 90, 154, 0.45), rgba(74, 154, 232, 0.35)) !important;
+  border-color: rgba(140, 200, 255, 0.5) !important;
+}
+
 .chest-card .morse-box {
   display: flex;
   flex-wrap: wrap;

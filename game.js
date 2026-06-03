@@ -90,12 +90,20 @@
   };
 
   const RAINBOW_KEY = "chinchilla-rainbow-unlocked";
+  const BLUE_CAP_KEY = "chinchilla-bluecap-unlocked";
   function isRainbowUnlocked() {
     try { return localStorage.getItem(RAINBOW_KEY) === "1"; } catch (e) { return false; }
   }
   function unlockRainbow() {
     try { localStorage.setItem(RAINBOW_KEY, "1"); } catch (e) {}
     refreshRainbowButton();
+  }
+  function isBlueCapUnlocked() {
+    try { return localStorage.getItem(BLUE_CAP_KEY) === "1"; } catch (e) { return false; }
+  }
+  function unlockBlueCap() {
+    try { localStorage.setItem(BLUE_CAP_KEY, "1"); } catch (e) {}
+    refreshBlueCapButton();
   }
   function refreshRainbowButton() {
     const btn = document.querySelector('#skin-options .cosmetic-btn[data-skin="rainbow"]');
@@ -113,7 +121,23 @@
     }
   }
 
-  const CHIN_HATS = { none: "none", gentleman: "gentleman", bear: "bear" };
+  function refreshBlueCapButton() {
+    const btn = document.querySelector('#hat-options .cosmetic-btn[data-hat="bluecap"]');
+    const grid = document.getElementById("hat-options");
+    if (!btn) return;
+    if (isBlueCapUnlocked()) {
+      btn.classList.remove("hidden");
+      btn.disabled = false;
+      btn.textContent = "Голубая кепка";
+      if (grid) { grid.classList.add("cosmetic-options-4"); grid.classList.remove("cosmetic-options-3"); }
+    } else {
+      btn.classList.add("hidden");
+      btn.disabled = true;
+      if (grid) { grid.classList.add("cosmetic-options-3"); grid.classList.remove("cosmetic-options-4"); }
+    }
+  }
+
+  const CHIN_HATS = { none: "none", gentleman: "gentleman", bear: "bear", bluecap: "bluecap" };
 
   function loadCosmetic(key, allowed, fallback) {
     try {
@@ -126,6 +150,7 @@
   let selectedSkin = loadCosmetic(SKIN_KEY, CHIN_SKINS, "standard");
   if (selectedSkin === "rainbow" && !isRainbowUnlocked()) selectedSkin = "standard";
   let selectedHat = loadCosmetic(HAT_KEY, CHIN_HATS, "none");
+  if (selectedHat === "bluecap" && !isBlueCapUnlocked()) selectedHat = "none";
 
   function getSkinPalette() {
     return CHIN_SKINS[selectedSkin] || CHIN_SKINS.standard;
@@ -141,6 +166,7 @@
 
   function setSelectedHat(id) {
     if (!CHIN_HATS[id]) return;
+    if (id === "bluecap" && !isBlueCapUnlocked()) return;
     selectedHat = id;
     try { localStorage.setItem(HAT_KEY, id); } catch (e) {}
     updateCosmeticUi();
@@ -205,7 +231,43 @@
       btn.addEventListener("click", function () { setSelectedHat(btn.dataset.hat); });
     });
     refreshRainbowButton();
+    refreshBlueCapButton();
     updateCosmeticUi();
+  }
+
+  function drawBlueCap(c) {
+    c = c || ctx;
+    c.save();
+    c.fillStyle = "rgba(0,0,0,0.15)";
+    c.beginPath();
+    c.ellipse(4, -12, 10, 2.2, 0.15, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = "#1e5a9a";
+    c.beginPath();
+    c.ellipse(0, -13, 15, 4.2, 0, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = "#2568b0";
+    c.beginPath();
+    c.ellipse(7, -12.5, 9, 3, 0.22, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = "#4a9ae8";
+    c.beginPath();
+    c.arc(0, -22, 12, Math.PI, 0);
+    c.lineTo(12, -13);
+    c.lineTo(-12, -13);
+    c.closePath();
+    c.fill();
+    c.fillStyle = "#6bb5f5";
+    c.beginPath();
+    c.arc(-4, -24, 5.5, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = "rgba(255,255,255,0.55)";
+    c.fillRect(-12, -16.5, 24, 2.2);
+    c.fillStyle = "#fff";
+    c.beginPath();
+    c.arc(0, -31, 1.6, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
   }
 
   function drawGentlemanHat(c) {
@@ -519,6 +581,7 @@
 
     if (hat === "gentleman") drawGentlemanHat(c);
     else if (hat === "bear") drawBearHat(c);
+    else if (hat === "bluecap") drawBlueCap(c);
   }
 
   const PLATFORM_TYPES = {
@@ -1490,6 +1553,7 @@
   let bossSci = null;
   let sciBullets = [];
   let sciVictory = null;
+  let secretRunSkin = "standard";
   let cutscene = null;
 
   const forestTreesFar = [];
@@ -3641,6 +3705,7 @@
     if (document.activeElement && document.activeElement.blur) {
       try { document.activeElement.blur(); } catch (e) {}
     }
+    secretRunSkin = selectedSkin;
     gameMode = "arcade";
     secretBoss = false;
     paused = false;
@@ -4320,6 +4385,7 @@
       y: sy,
       cageX: W / 2,
       cageY: SCI_GROUND_Y - 88,
+      showCap: secretRunSkin === "rainbow",
     };
     spawnSciExplosion(sx, sy);
     state = "sciVictory";
@@ -4365,9 +4431,17 @@
     ctx.fillStyle = "rgba(12,20,32,0.55)";
     ctx.fillRect(-w / 2, -h * 0.88, w, h * 0.88);
 
-    // rainbow chinchilla inside
+    // rainbow chinchilla inside (+ blue cap if rainbow run)
     if (pop > 0.35) {
-      drawMiniChin(0, -h * 0.38 + Math.sin(t * 0.12) * 3, 0.82, "rainbow", t, false);
+      const cageHat = sciVictory.showCap ? "bluecap" : "none";
+      drawMiniChin(0, -h * 0.38 + Math.sin(t * 0.12) * 3, 0.82, "rainbow", t, false, cageHat);
+      if (sciVictory.showCap && pop > 0.55) {
+        ctx.save();
+        ctx.translate(-38, -h * 0.22 + Math.sin(t * 0.15 + 1) * 4);
+        ctx.scale(0.72, 0.72);
+        drawBlueCap(ctx);
+        ctx.restore();
+      }
     }
 
     // bars
@@ -4472,7 +4546,7 @@
       ctx.textAlign = "center";
       ctx.shadowColor = "rgba(0,0,0,0.85)";
       ctx.shadowBlur = 5;
-      ctx.fillText("Радужная шиншилла спасена!", W / 2, H - 90);
+      ctx.fillText(v.showCap ? "Радужная шиншилла и голубая кепка!" : "Радужная шиншилла спасена!", W / 2, H - 90);
       ctx.restore();
     }
 
@@ -4480,8 +4554,13 @@
   }
 
   function onSecretBossDefeated() {
+    const earnedCap = secretRunSkin === "rainbow";
     unlockRainbow();
     setSelectedSkin("rainbow");
+    if (earnedCap) {
+      unlockBlueCap();
+      setSelectedHat("bluecap");
+    }
     secretBoss = false;
     sciBoss = false;
     bossSci = null;
@@ -4489,6 +4568,18 @@
     stopBossMusic();
     state = "over";
     const modal = document.getElementById("secret-victory");
+    const titleEl = document.getElementById("sv-title");
+    const subEl = document.getElementById("sv-subtitle");
+    if (titleEl) {
+      titleEl.textContent = earnedCap
+        ? "🧢 Голубая кепка найдена!"
+        : "🌈 Радужная шиншилла спасена!";
+    }
+    if (subEl) {
+      subEl.textContent = earnedCap
+        ? "Радужная шиншилла прошла секретный уровень и принесла голубую кепку из лаборатории!"
+        : "Ты победил босса и освободил радужную шиншиллу. Новый скин разблокирован!";
+    }
     if (modal) { modal.classList.remove("hidden"); modal.classList.add("visible"); }
   }
 
@@ -4508,6 +4599,7 @@
     gameoverEl.classList.add("hidden");
     setPlayingUi(false);
     refreshRainbowButton();
+    refreshBlueCapButton();
     updateCosmeticUi();
   }
 
@@ -5161,12 +5253,12 @@
     }
   }
 
-  function drawMiniChin(x, y, sc, palKey, t, flip) {
+  function drawMiniChin(x, y, sc, palKey, t, flip, hat) {
     const pal = CHIN_SKINS[palKey] || CHIN_SKINS.standard;
     ctx.save();
     ctx.translate(x, y);
     ctx.scale(flip ? -sc : sc, sc);
-    drawChinchillaBody(ctx, pal, t, Math.sin(t * 0.2 + x) * 0.3, "none");
+    drawChinchillaBody(ctx, pal, t, Math.sin(t * 0.2 + x) * 0.3, hat || "none");
     ctx.restore();
   }
 
